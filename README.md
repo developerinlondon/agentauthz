@@ -1,93 +1,95 @@
 # neutron-authz
 
-Embeddable TypeScript authorization engine: policy statements, grants-at-scope, ABAC conditions, deny-wins. Extracted from the neutron agent platform.
+Embeddable TypeScript authorization engine: AWS-shape policy statements + grants-at-scope + typed
+ABAC conditions, deny-wins, asymmetric fail-closed. Extracted from the neutron agent platform;
+design: [designs/library-architecture.md](designs/library-architecture.md).
 
-## Getting started
-
-To make it easy for you to get started with GitLab, here's a list of recommended next steps.
-
-Already a pro? Just edit this README.md and make it your own. Want to make it easy? [Use the template at the bottom](#editing-this-readme)!
-
-## Add your files
-
-* [Create](https://docs.gitlab.com/user/project/repository/web_editor/#create-a-file) or [upload](https://docs.gitlab.com/user/project/repository/web_editor/#upload-a-file) files
-* [Add files using the command line](https://docs.gitlab.com/topics/git/add_files/#add-files-to-a-git-repository) or push an existing Git repository with the following command:
-
-```
-cd existing_repo
-git remote add origin https://gitlab.com/bizfoundry/core/neutron-authz.git
-git branch -M main
-git push -uf origin main
+```text
+src/
+├── model/        statement, grant, condition, subject {kind,id}, scope shapes — THE SPEC
+├── core/         pure evaluator (zero deps, no I/O) + validate/repair + SoD approvals
+├── conformance/  golden JSON fixtures: every semantic as data-driven cases + runner
+├── ports/        GrantStore · AuditSink · ScopeRoleSynthesizer · ActionRegistry ·
+│                 ConditionKeys · SubjectDirectory
+└── backends/pg/  reference Kysely adapter + migrations (authz_policies · authz_grants · authz_audit)
 ```
 
-## Integrate with your tools
+## Semantics (the contract)
 
-* [Set up project integrations](https://gitlab.com/bizfoundry/core/neutron-authz/-/settings/integrations)
+- **Statement** `{effect, actions, resources, conditions?}` — actions from a closed host registry,
+  NEVER wildcarded; resources exact or single trailing `*`; conditions typed
+  `{operator, key,
+  value}`, no expression language.
+- **Grant** = (policy, subject `{kind,id}`, scope `{kind,id}`). A check evaluates against an
+  ordered, host-resolved scope chain (root first): every grant at any chain scope applies — **deny
+  anywhere beats allow anywhere**; nothing granted ⇒ deny.
+- **Conditions** are tri-state (`match` / `no-match` / `unmatchable`) and **asymmetric
+  fail-closed**: an allow contributes only on a definitive match; a deny fires on match AND on
+  unmatchable (an unevaluable deny stays standing). Malformed input — scope chain, subjects,
+  condition shapes — always denies.
+- **Role synthesis**: app-owned role rows become grants at check time via `ScopeRoleSynthesizer` —
+  one storage, no dual-write; synthesized grants join the same deny-wins union.
+- Host keeps, permanently: authn → subjects resolution, admin-bypass decision (`bypass` check
+  option), token minting, HTTP routes, admin UI, tool vocabulary/discovery.
 
-## Collaborate with your team
+## Consumers
 
-* [Invite team members and collaborators](https://docs.gitlab.com/user/project/members/)
-* [Create a new merge request](https://docs.gitlab.com/user/project/merge_requests/creating_merge_requests/)
-* [Automatically close issues from merge requests](https://docs.gitlab.com/user/project/issues/managing_issues/#closing-issues-automatically)
-* [Enable merge request approvals](https://docs.gitlab.com/user/project/merge_requests/approvals/)
-* [Set auto-merge](https://docs.gitlab.com/user/project/merge_requests/auto_merge/)
-
-## Test and Deploy
-
-Use the built-in continuous integration in GitLab.
-
-* [Get started with GitLab CI/CD](https://docs.gitlab.com/ci/quick_start/)
-* [Analyze your code for known vulnerabilities with Static Application Security Testing (SAST)](https://docs.gitlab.com/user/application_security/sast/)
-* [Deploy to Kubernetes, Amazon EC2, or Amazon ECS using Auto Deploy](https://docs.gitlab.com/topics/autodevops/requirements/)
-* [Use pull-based deployments for improved Kubernetes management](https://docs.gitlab.com/user/clusters/agent/)
-* [Set up protected environments](https://docs.gitlab.com/ci/environments/protected_environments/)
-
-***
-
-# Editing this README
-
-When you're ready to make this README your own, just edit this file and use the handy template below (or feel free to structure it however you want - this is just a starting point!). Thanks to [makeareadme.com](https://www.makeareadme.com/) for this template.
-
-## Suggestions for a good README
-
-Every project is different, so consider which of these sections apply to yours. The sections used in the template are suggestions for most open source projects. Also keep in mind that while a README can be too long and detailed, too long is better than too short. If you think your README is too long, consider utilizing another form of documentation rather than cutting out information.
-
-## Name
-Choose a self-explaining name for your project.
-
-## Description
-Let people know what your project can do specifically. Provide context and add a link to any reference visitors might be unfamiliar with. A list of Features or a Background subsection can also be added here. If there are alternatives to your project, this is a good place to list differentiating factors.
-
-## Badges
-On some READMEs, you may see small images that convey metadata, such as whether or not all the tests are passing for the project. You can use Shields to add some to your README. Many services also have instructions for adding a badge.
-
-## Visuals
-Depending on what you are making, it can be a good idea to include screenshots or even a video (you'll frequently see GIFs rather than actual videos). Tools like ttygif can help, but check out Asciinema for a more sophisticated method.
-
-## Installation
-Within a particular ecosystem, there may be a common way of installing things, such as using Yarn, NuGet, or Homebrew. However, consider the possibility that whoever is reading your README is a novice and would like more guidance. Listing specific steps helps remove ambiguity and gets people to using your project as quickly as possible. If it only runs in a specific context like a particular programming language version or operating system or has dependencies that have to be installed manually, also add a Requirements subsection.
+Subpath exports point at raw `.ts` sources — intentional: the target hosts run Bun, which executes
+TypeScript directly, so there is no build step and no drift between published types and code. A
+consumer therefore needs a TS-aware runtime or bundler (Bun, or tsx/vite/esbuild-style tooling);
+plain `node` cannot import this package as-is.
 
 ## Usage
-Use examples liberally, and show the expected output if you can. It's helpful to have inline the smallest example of usage that you can demonstrate, while providing links to more sophisticated examples if they are too long to reasonably include in the README.
 
-## Support
-Tell people where they can go to for help. It can be any combination of an issue tracker, a chat room, an email address, etc.
+```ts
+import { AuthzMigrationProvider, PgAuthzStore } from "@bizfoundry/neutron-authz/backends/pg";
+import { makeAuthz } from "@bizfoundry/neutron-authz/core";
 
-## Roadmap
-If you have ideas for releases in the future, it is a good idea to list them in the README.
+const config = { scopeKinds: ["root", "space"], rootScope: { kind: "root", id: "*" } };
+// Apply migrations into YOUR db (Kysely Migrator + AuthzMigrationProvider(config)),
+// or fold authzMigrations(config) into your own chain.
 
-## Contributing
-State if you are open to contributions and what your requirements are for accepting them.
+const store = new PgAuthzStore(db, config);
+const authz = makeAuthz({
+  grantStore: store,
+  auditSink: store,
+  scopeKinds: config.scopeKinds,
+  defaultScopeChain: [config.rootScope],
+  conditionKeys: { "app:Email": { type: "string", lowercase: true } },
+});
 
-For people who want to make changes to your project, it's helpful to have some documentation on how to get started. Perhaps there is a script that they should run or some environment variables that they need to set. Make these steps explicit. These instructions could also be useful to your future self.
+await authz.check(
+  [{ kind: "user", id: "alice@example.com" }, { kind: "role", id: "ops" }],
+  "docs.read",
+  "doc:support",
+  {
+    scopeChain: [config.rootScope, { kind: "space", id: "s1" }],
+    context: { "app:Email": "alice@example.com" },
+  },
+);
+```
 
-You can also document commands to lint the code or run tests. These steps help to ensure high code quality and reduce the likelihood that the changes inadvertently break something. Having instructions for running tests is especially helpful if it requires external setup, such as starting a Selenium server for testing in a browser.
+Policy writes go through `validateStatements(input, { isKnownAction, conditionKeys })` before the
+store; AI drafts through `repairDraft`. Built-in condition keys (`request:Time`, `request:HourUTC`,
+`request:SourceIp`) are populated by the engine; everything else is host-declared and host-populated
+— a key with no honest value stays unpopulated (fails closed).
 
-## Authors and acknowledgment
-Show your appreciation to those who have contributed to the project.
+## Conformance
 
-## License
-For open source projects, say how it is licensed.
+`src/conformance/cases/*.json` is the backend flip contract: language-neutral golden fixtures for
+deny-wins, scope inheritance, resource matching, condition semantics, asymmetric fail-closed,
+malformed-input, and role synthesis. Any alternative backend must decide every case identically
+before an app flips config to it — see `tests/pg.test.ts` for the storage-backed runner template.
+Cases marked `"storable": false` carry condition shapes the pg CHECK constraint refuses at rest; a
+shape-checking backend asserts the rejection instead.
 
-## Project status
-If you have run out of energy or time for your project, put a note at the top of the README saying that development has slowed down or stopped completely. Someone may choose to fork your project or volunteer to step in as a maintainer or owner, allowing your project to keep going. You can also make an explicit request for maintainers.
+## Development
+
+```sh
+bun install
+bun test              # pg suite needs DATABASE_URL (scratch db is created/dropped), e.g.:
+                      #   docker run -d --name authz-pg -e POSTGRES_PASSWORD=x -p 5436:5432 postgres:18-alpine
+                      #   echo 'DATABASE_URL=postgres://postgres:x@127.0.0.1:5436/postgres' > .env.test
+bunx tsc --noEmit     # TypeScript 7 native typecheck
+dprint fmt
+```
