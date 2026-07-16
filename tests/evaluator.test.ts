@@ -228,3 +228,94 @@ describe("memory store contract", () => {
     expect(await store.grantsFor([alice], [ROOT, SPACE("s1")])).toEqual([]);
   });
 });
+
+describe("checkDetailed — allow provenance (v0.1.1)", () => {
+  // Model neutron's open-mode baseline: a synthesizer that allows agent.use on
+  // everything for EVERY caller, unconditionally (like accessModeSynthesizer —
+  // it returns the grant regardless of subject; check() trusts synthesizer
+  // output without re-filtering by subject). The visibility gate needs to tell
+  // an EXPLICIT stored grant apart from this ambient allow.
+  const openBaseline = {
+    async grantsFor(): Promise<ResolvedGrant[]> {
+      return [
+        grant({ kind: "mode", id: "open" }, ROOT, [
+          { effect: "allow", actions: ["agent.use"], resources: ["agent:*"] },
+        ], "OpenMode"),
+      ];
+    },
+  };
+
+  test("allowed only by the synthesizer ⇒ allowed, but not by stored grants", async () => {
+    const authz = makeAuthz({
+      grantStore: makeStore([]),
+      defaultScopeChain: [ROOT],
+      synthesizers: [openBaseline],
+    });
+    const d = await authz.checkDetailed([alice], "agent.use", "agent:heal");
+    expect(d.allowed).toBe(true);
+    expect(d.decision).toBe("allow");
+    expect(d.allowedByStoredGrants).toBe(false);
+  });
+
+  test("an explicit stored allow ⇒ allowedByStoredGrants true", async () => {
+    const authz = makeAuthz({
+      grantStore: makeStore([
+        grant(alice, ROOT, [{
+          effect: "allow",
+          actions: ["agent.use"],
+          resources: ["agent:heal"],
+        }]),
+      ]),
+      defaultScopeChain: [ROOT],
+      synthesizers: [openBaseline],
+    });
+    const d = await authz.checkDetailed([alice], "agent.use", "agent:heal");
+    expect(d.allowed).toBe(true);
+    expect(d.allowedByStoredGrants).toBe(true);
+  });
+
+  test("a stored deny beats both the synthesizer and any stored allow", async () => {
+    const authz = makeAuthz({
+      grantStore: makeStore([
+        grant(alice, ROOT, [{ effect: "deny", actions: ["agent.use"], resources: ["agent:heal"] }]),
+      ]),
+      defaultScopeChain: [ROOT],
+      synthesizers: [openBaseline],
+    });
+    const d = await authz.checkDetailed([alice], "agent.use", "agent:heal");
+    expect(d.allowed).toBe(false);
+    expect(d.decision).toBe("deny");
+    expect(d.allowedByStoredGrants).toBe(false);
+  });
+
+  test("bypass ⇒ admin_bypass + allowed, still reporting the real stored verdict", async () => {
+    const authz = makeAuthz({
+      grantStore: makeStore([]),
+      defaultScopeChain: [ROOT],
+      synthesizers: [openBaseline],
+    });
+    const d = await authz.checkDetailed([alice], "agent.use", "agent:heal", { bypass: true });
+    expect(d.decision).toBe("admin_bypass");
+    expect(d.allowed).toBe(true);
+    expect(d.allowedByStoredGrants).toBe(false);
+  });
+
+  test("a malformed scope chain fails closed (no stored allow reported)", async () => {
+    const authz = makeAuthz({
+      grantStore: makeStore([
+        grant(alice, ROOT, [{
+          effect: "allow",
+          actions: ["agent.use"],
+          resources: ["agent:heal"],
+        }]),
+      ]),
+      scopeKinds: ["root"],
+      defaultScopeChain: [ROOT],
+    });
+    const d = await authz.checkDetailed([alice], "agent.use", "agent:heal", {
+      scopeChain: [{ kind: "space", id: "nope" }],
+    });
+    expect(d.allowed).toBe(false);
+    expect(d.allowedByStoredGrants).toBe(false);
+  });
+});

@@ -1,6 +1,6 @@
 {
   "name": "@bizfoundry/neutron-authz",
-  "version": "0.1.0",
+  "version": "0.1.1",
   "description": "Embeddable authorization engine: policy statements, grants-at-scope, typed ABAC conditions, deny-wins, asymmetric fail-closed.",
   "type": "module",
   "exports": {
