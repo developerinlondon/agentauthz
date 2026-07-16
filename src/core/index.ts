@@ -1,5 +1,11 @@
 export { canApprove, inboxVisible, resolveApprover } from "./approvals.js";
-export { type Authz, type AuthzOptions, type CheckOpts, makeAuthz } from "./authz.js";
+export {
+  type Authz,
+  type AuthzOptions,
+  type CheckDetail,
+  type CheckOpts,
+  makeAuthz,
+} from "./authz.js";
 export {
   BUILTIN_CONDITION_KEYS,
   builtinContextEntries,

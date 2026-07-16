@@ -44,6 +44,23 @@ export interface CheckOpts {
   now?: Date;
 }
 
+// Provenance of an allow decision (checkDetailed): the same deny-wins verdict
+// as check(), plus whether the STORED grants alone would allow it — i.e.
+// whether an explicit grant, not a synthesizer (open-mode baseline, participant
+// roles, …), carried the allow. Lets a host distinguish "allowed because this
+// principal was explicitly granted" from "allowed only by an ambient default".
+export interface CheckDetail {
+  // The final deny-wins decision (bypass ⇒ "admin_bypass").
+  decision: "allow" | "deny" | "admin_bypass";
+  // The overall verdict as a boolean (decision !== "deny").
+  allowed: boolean;
+  // Would the STORED grants alone (synthesizers excluded) allow this? A stored
+  // deny — or nothing stored — makes this false even when a synthesizer allows.
+  // admin_bypass does not fabricate a stored grant, so this stays as the real
+  // stored-grant verdict.
+  allowedByStoredGrants: boolean;
+}
+
 export interface Authz {
   // May `subjects` perform `action` on `resource`? Union of the applicable
   // grants over the resolved scope chain; an explicit deny beats any allow;
@@ -54,6 +71,15 @@ export interface Authz {
     resource: string,
     opts?: CheckOpts,
   ): Promise<boolean>;
+  // check() plus allow-provenance: whether the stored grants alone (no
+  // synthesizers) allow it. Audited identically to check(). Bypass returns
+  // decision "admin_bypass"/allowed true but reports the real stored verdict.
+  checkDetailed(
+    subjects: readonly Subject[],
+    action: string,
+    resource: string,
+    opts?: CheckOpts,
+  ): Promise<CheckDetail>;
   // The grants effective for these subjects over a chain, for a "why" view.
   // Bypass is not materialised here — it's a check()-time rule.
   listGrantsFor(subjects: readonly Subject[], scopeChain?: ScopeChain): Promise<ResolvedGrant[]>;
@@ -133,6 +159,43 @@ class AuthzEvaluator implements Authz {
     return allowed;
   }
 
+  async checkDetailed(
+    subjects: readonly Subject[],
+    action: string,
+    resource: string,
+    opts?: CheckOpts,
+  ): Promise<CheckDetail> {
+    const chain = opts?.scopeChain ?? this.options.defaultScopeChain ?? [];
+    const badChain = !Array.isArray(chain) || chain.some((s) => !this.knownScope(s));
+    if (badChain) {
+      // Fail closed exactly like check(): an unknown chain denies, and stored
+      // grants are never consulted, so there is no explicit allow to report.
+      if (!opts?.bypass) this.audit(subjects, action, resource, "deny", opts);
+      else this.audit(subjects, action, resource, "admin_bypass", opts);
+      return {
+        decision: opts?.bypass ? "admin_bypass" : "deny",
+        allowed: !!opts?.bypass,
+        allowedByStoredGrants: false,
+      };
+    }
+    const valid = Array.isArray(subjects) ? subjects.filter(isValidSubject) : [];
+    const { stored, synthesized } = await this.resolveGrantsSplit(valid, chain);
+    const ctx = makeConditionContext({
+      ...opts?.context,
+      ...builtinContextEntries({ now: opts?.now, sourceIp: opts?.sourceIp }),
+    });
+    const storedAllows = decide(stored, action, resource, ctx, this.keys) === "allow";
+    const fullAllows =
+      decide([...stored, ...synthesized], action, resource, ctx, this.keys) === "allow";
+    const decision = opts?.bypass ? "admin_bypass" : fullAllows ? "allow" : "deny";
+    this.audit(subjects, action, resource, decision, opts);
+    return {
+      decision,
+      allowed: decision !== "deny",
+      allowedByStoredGrants: storedAllows,
+    };
+  }
+
   async listGrantsFor(
     subjects: readonly Subject[],
     scopeChain?: ScopeChain,
@@ -155,11 +218,22 @@ class AuthzEvaluator implements Authz {
     subjects: readonly Subject[],
     chain: ScopeChain,
   ): Promise<ResolvedGrant[]> {
+    const { stored, synthesized } = await this.resolveGrantsSplit(subjects, chain);
+    return [...stored, ...synthesized];
+  }
+
+  // Stored grants and synthesizer output kept apart, so checkDetailed can decide
+  // "would the stored grants alone allow this?" independently of the ambient
+  // synthesizers (open-mode baseline, participant roles).
+  private async resolveGrantsSplit(
+    subjects: readonly Subject[],
+    chain: ScopeChain,
+  ): Promise<{ stored: ResolvedGrant[]; synthesized: ResolvedGrant[]; }> {
     const stored = await this.options.grantStore.grantsFor(subjects, chain);
     const synthesized = await Promise.all(
       (this.options.synthesizers ?? []).map((s) => s.grantsFor(subjects, chain)),
     );
-    return [...stored, ...synthesized.flat()];
+    return { stored, synthesized: synthesized.flat() };
   }
 }
 
