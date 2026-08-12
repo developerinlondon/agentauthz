@@ -3,6 +3,12 @@
 // any alternative backend must be decision-identical (the conformance/
 // fixtures are the contract).
 
+import {
+  type ActionCatalogueEntry,
+  type ActionParentLookup,
+  collectDescendants,
+  indexActionCatalogue,
+} from "../model/action.js";
 import type { ConditionKeys } from "../model/condition.js";
 import type { ResolvedGrant } from "../model/grant.js";
 import type { ScopeChain } from "../model/scope.js";
@@ -14,11 +20,30 @@ export type { ConditionKeys };
 // there is NO action wildcard (the resource side wildcards instead).
 export interface ActionRegistry {
   isKnownAction(action: string): boolean;
+  // Declared derivation, when the host has one. A statement naming the parent
+  // covers every action deriving from it, allow and deny alike.
+  parentOf?: ActionParentLookup;
+  // Everything deriving transitively from `action`, so a host can render the
+  // exact set a statement permits instead of an opaque coarse name.
+  descendantsOf?(action: string): string[];
 }
 
 export function actionRegistryFromList(actions: readonly string[]): ActionRegistry {
   const set = new Set(actions);
   return { isKnownAction: (action) => set.has(action) };
+}
+
+// Builds a registry from a declared catalogue, validating that every parent is
+// itself declared and that the graph is acyclic. Throws on a bad vocabulary.
+export function actionRegistryFromCatalogue(
+  entries: readonly ActionCatalogueEntry[],
+): ActionRegistry {
+  const { parents, children, actions } = indexActionCatalogue(entries);
+  return {
+    isKnownAction: (action) => actions.has(action),
+    parentOf: (action) => parents.get(action),
+    descendantsOf: (action) => collectDescendants(children, action),
+  };
 }
 
 // Evaluation-facing grant lookup: EXACTLY the grants whose subject is one of

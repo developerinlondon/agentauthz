@@ -19,6 +19,7 @@ export interface ConformanceCase {
         sourceIp?: string;
         now?: string;
     };
+    actionDerivation: Record<string, string>;
     expect: "allow" | "deny";
     storable: boolean;
 }

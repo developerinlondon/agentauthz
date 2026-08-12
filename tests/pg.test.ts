@@ -155,11 +155,15 @@ const pgImpl: ConformanceImpl = async (c) => {
       createdBy: null,
     });
   }
+  const derivation = c.actionDerivation;
   const authz = makeAuthz({
     grantStore: store,
     synthesizers: c.synthesizedGrants.length > 0 ? [memoryGrantSource(c.synthesizedGrants)] : [],
     conditionKeys: c.conditionKeys,
     scopeKinds: c.scopeKinds,
+    actionRegistry: Object.keys(derivation).length > 0
+      ? { isKnownAction: () => true, parentOf: (a) => derivation[a] }
+      : undefined,
   });
   const allowed = await authz.check(c.check.subjects, c.check.action, c.check.resource, {
     scopeChain: c.check.scopeChain,
