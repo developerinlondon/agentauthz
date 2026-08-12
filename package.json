@@ -1,20 +1,65 @@
 {
-  "name": "@bizfoundry/neutron-authz",
-  "version": "0.1.1",
-  "description": "Embeddable authorization engine: policy statements, grants-at-scope, typed ABAC conditions, deny-wins, asymmetric fail-closed.",
+  "name": "neutron-authz",
+  "version": "0.2.0",
+  "description": "Embeddable authorization engine for TypeScript: policy statements, grants-at-scope, typed ABAC conditions, deny-wins, asymmetric fail-closed. Policies live as rows in your own Postgres.",
+  "license": "Apache-2.0",
+  "author": "Nayeem Syed",
+  "homepage": "https://github.com/developerinlondon/neutron-authz#readme",
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/developerinlondon/neutron-authz.git"
+  },
+  "bugs": {
+    "url": "https://github.com/developerinlondon/neutron-authz/issues"
+  },
+  "keywords": [
+    "authorization",
+    "authz",
+    "abac",
+    "rbac",
+    "access-control",
+    "policy",
+    "permissions",
+    "postgres",
+    "kysely",
+    "typescript"
+  ],
   "type": "module",
   "exports": {
-    ".": "./src/index.ts",
-    "./model": "./src/model/index.ts",
-    "./core": "./src/core/index.ts",
-    "./ports": "./src/ports/index.ts",
-    "./conformance": "./src/conformance/index.ts",
-    "./backends/pg": "./src/backends/pg/index.ts"
+    ".": {
+      "types": "./dist/index.d.ts",
+      "import": "./dist/index.js"
+    },
+    "./model": {
+      "types": "./dist/model/index.d.ts",
+      "import": "./dist/model/index.js"
+    },
+    "./core": {
+      "types": "./dist/core/index.d.ts",
+      "import": "./dist/core/index.js"
+    },
+    "./ports": {
+      "types": "./dist/ports/index.d.ts",
+      "import": "./dist/ports/index.js"
+    },
+    "./conformance": {
+      "types": "./dist/conformance/index.d.ts",
+      "import": "./dist/conformance/index.js"
+    },
+    "./backends/pg": {
+      "types": "./dist/backends/pg/index.d.ts",
+      "import": "./dist/backends/pg/index.js"
+    }
   },
   "files": [
-    "src"
+    "dist"
   ],
+  "engines": {
+    "node": ">=20"
+  },
   "scripts": {
+    "build": "rm -rf dist && tsc -p tsconfig.build.json && cp -R src/conformance/cases dist/conformance/cases",
+    "prepublishOnly": "bun run build",
     "test": "bun test",
     "typecheck": "tsc --noEmit"
   },
@@ -34,6 +79,6 @@
     "typescript": "7.0.2"
   },
   "publishConfig": {
-    "registry": "https://gitlab.com/api/v4/projects/bizfoundry%2Fcore%2Fneutron-authz/packages/npm/"
+    "access": "public"
   }
 }
