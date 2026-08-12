@@ -4,8 +4,8 @@
 // the subject/scope matching itself from a raw grant list, which makes it the
 // executable reference the conformance fixtures run against: a storage
 // backend's filtered `grantsFor` must be decision-identical to this filter.
-import { isValidScope, scopeEquals } from "../model/scope.js";
 import { matchAction } from "../model/action.js";
+import { isValidScope, scopeEquals } from "../model/scope.js";
 import { resourceMatches } from "../model/statement.js";
 import { isValidSubject, subjectEquals } from "../model/subject.js";
 import { evalConditions } from "./conditions.js";

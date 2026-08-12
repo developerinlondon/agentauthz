@@ -9,6 +9,11 @@ export const CONDITION_OPERATORS = [
   "StringEquals",
   "StringNotEquals",
   "StringLike",
+  // Set membership, taking `values` instead of `value` — an allowlist is one
+  // condition rather than one statement per permitted value.
+  "StringIn",
+  "StringNotIn",
+  "StringLikeIn",
   "NumericLessThan",
   "NumericGreaterThan",
   "DateLessThan",
@@ -25,6 +30,9 @@ export const OPERATOR_KEY_TYPE: Record<ConditionOperator, ConditionKeyType> = {
   StringEquals: "string",
   StringNotEquals: "string",
   StringLike: "string",
+  StringIn: "string",
+  StringNotIn: "string",
+  StringLikeIn: "string",
   NumericLessThan: "number",
   NumericGreaterThan: "number",
   DateLessThan: "date",
@@ -48,7 +56,19 @@ export type ConditionKeys = Record<string, ConditionKeySpec>;
 export interface PolicyCondition {
   operator: string;
   key: string;
-  value: string;
+  // Scalar operators read `value`; set operators read `values`. Exactly one
+  // is populated — carrying both is unmatchable rather than a guess at which
+  // the author meant.
+  value?: string;
+  values?: string[];
+}
+
+// Operators whose bound is a list. Kept beside CONDITION_OPERATORS so adding
+// an operator cannot silently miss the set/scalar split.
+export const SET_OPERATORS = ["StringIn", "StringNotIn", "StringLikeIn"] as const;
+
+export function isSetOperator(operator: string): boolean {
+  return (SET_OPERATORS as readonly string[]).includes(operator);
 }
 
 // The attribute bag conditions test — build it ONLY via

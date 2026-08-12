@@ -8,6 +8,11 @@ export const CONDITION_OPERATORS = [
     "StringEquals",
     "StringNotEquals",
     "StringLike",
+    // Set membership, taking `values` instead of `value` — an allowlist is one
+    // condition rather than one statement per permitted value.
+    "StringIn",
+    "StringNotIn",
+    "StringLikeIn",
     "NumericLessThan",
     "NumericGreaterThan",
     "DateLessThan",
@@ -20,6 +25,9 @@ export const OPERATOR_KEY_TYPE = {
     StringEquals: "string",
     StringNotEquals: "string",
     StringLike: "string",
+    StringIn: "string",
+    StringNotIn: "string",
+    StringLikeIn: "string",
     NumericLessThan: "number",
     NumericGreaterThan: "number",
     DateLessThan: "date",
@@ -27,4 +35,10 @@ export const OPERATOR_KEY_TYPE = {
     IpAddress: "ip",
     NotIpAddress: "ip",
 };
+// Operators whose bound is a list. Kept beside CONDITION_OPERATORS so adding
+// an operator cannot silently miss the set/scalar split.
+export const SET_OPERATORS = ["StringIn", "StringNotIn", "StringLikeIn"];
+export function isSetOperator(operator) {
+    return SET_OPERATORS.includes(operator);
+}
 //# sourceMappingURL=condition.js.map
