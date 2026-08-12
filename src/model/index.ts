@@ -16,8 +16,10 @@ export {
   type ConditionKeySpec,
   type ConditionKeyType,
   type ConditionOperator,
+  isSetOperator,
   OPERATOR_KEY_TYPE,
   type PolicyCondition,
+  SET_OPERATORS,
 } from "./condition.js";
 export type { GrantRecord, PolicyRecord, ResolvedGrant } from "./grant.js";
 export { isValidScope, type Scope, type ScopeChain, scopeEquals } from "./scope.js";

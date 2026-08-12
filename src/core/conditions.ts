@@ -32,6 +32,7 @@ import {
   type ConditionKeys,
   type ConditionKeySpec,
   type ConditionOperator,
+  isSetOperator,
   OPERATOR_KEY_TYPE,
   type PolicyCondition,
 } from "../model/condition.js";
@@ -189,6 +190,39 @@ function ipInCidr(ip: string, cidr: string): boolean | null {
   return bytesMatchPrefix(ipBytes, net.bytes, net.prefixLen);
 }
 
+// One set-membership condition. `values` is the policy's allowlist; ctxValue
+// is what the request carries. With a list on BOTH sides the semantic is a
+// non-empty intersection — the request holds at least one permitted value —
+// and StringNotIn is its exact negation, true only when nothing intersects.
+// An empty list is unmatchable, never a vacuous allow.
+function evalOneSet(
+  operator: ConditionOperator,
+  values: readonly string[],
+  ctxValue: string | number | string[],
+): boolean | null {
+  if (values.length === 0) return null;
+  const held = Array.isArray(ctxValue) ? ctxValue.map(String) : [String(ctxValue)];
+  switch (operator) {
+    case "StringIn":
+    case "StringNotIn": {
+      const hit = held.some((h) => values.includes(h));
+      return operator === "StringIn" ? hit : !hit;
+    }
+    case "StringLikeIn": {
+      for (const pattern of values) {
+        if (!isValidLikePattern(pattern)) return null;
+      }
+      return held.some((h) =>
+        values.some((pattern) =>
+          pattern.endsWith("*") ? h.startsWith(pattern.slice(0, -1)) : h === pattern
+        )
+      );
+    }
+    default:
+      return null;
+  }
+}
+
 // One condition, already known well-formed: definitively true, definitively
 // false, or null when it cannot be evaluated (unparseable value for the
 // operator, invalid like-pattern, malformed CIDR). null propagates to
@@ -236,6 +270,10 @@ function evalOne(
       if (inCidr === null) return null;
       return operator === "IpAddress" ? inCidr : !inCidr;
     }
+    // Set operators are dispatched to evalOneSet before this point; reaching
+    // here means a scalar path was handed one, which is unmatchable.
+    default:
+      return null;
   }
 }
 
@@ -255,23 +293,40 @@ export function evalConditions(
 ): ConditionsVerdict {
   if (conditions === undefined || conditions === null) return "match";
   if (!Array.isArray(conditions)) return "unmatchable";
-  const checked: Array<{ operator: ConditionOperator; key: string; value: string; }> = [];
+  const checked: Array<
+    { operator: ConditionOperator; key: string; value: string; values?: string[]; }
+  > = [];
   for (const c of conditions) {
     const cond = c as Record<string, unknown> | null;
     if (!cond || typeof cond !== "object" || Array.isArray(cond)) return "unmatchable";
-    const { operator, key, value } = cond;
-    if (typeof operator !== "string" || typeof key !== "string" || typeof value !== "string") {
-      return "unmatchable";
-    }
+    const { operator, key, value, values } = cond;
+    if (typeof operator !== "string" || typeof key !== "string") return "unmatchable";
     if (!(CONDITION_OPERATORS as readonly string[]).includes(operator)) return "unmatchable";
+    // Exactly one bound. A set operator carrying `value`, a scalar operator
+    // carrying `values`, or a condition carrying both, is a document whose
+    // intent cannot be read — refuse it rather than pick a side.
+    const isSet = isSetOperator(operator);
+    if (isSet) {
+      if (value !== undefined) return "unmatchable";
+      if (!Array.isArray(values) || values.length === 0) return "unmatchable";
+      if (values.some((v) => typeof v !== "string" || v.length === 0)) return "unmatchable";
+    } else {
+      if (values !== undefined) return "unmatchable";
+      if (typeof value !== "string") return "unmatchable";
+    }
     if (!Object.hasOwn(keys, key)) return "unmatchable";
     if (OPERATOR_KEY_TYPE[operator as ConditionOperator] !== keys[key]!.type) {
       return "unmatchable";
     }
-    checked.push({ operator: operator as ConditionOperator, key, value });
+    checked.push({
+      operator: operator as ConditionOperator,
+      key,
+      value: typeof value === "string" ? value : "",
+      ...(isSet ? { values: values as string[] } : {}),
+    });
   }
   let all = true;
-  for (const { operator, key, value } of checked) {
+  for (const { operator, key, value, values } of checked) {
     // Declared key the context doesn't populate (e.g. a caller-email key for
     // a service principal): not knowable — unmatchable, never a silent skip.
     if (!Object.hasOwn(ctx, key)) return "unmatchable";
@@ -296,7 +351,9 @@ export function evalConditions(
       : Array.isArray(raw)
       ? raw.map((v) => typeof v === "string" ? v.toLowerCase() : v)
       : raw;
-    const one = evalOne(operator, compareValue, ctxValue);
+    const one = values !== undefined
+      ? evalOneSet(operator, lower ? values.map((v) => v.toLowerCase()) : values, ctxValue)
+      : evalOne(operator, compareValue, ctxValue);
     if (one === null) return "unmatchable";
     if (!one) all = false;
   }
@@ -330,11 +387,48 @@ export function validateConditions(input: unknown, keys: ConditionKeys): Conditi
     if (typeof c.key !== "string" || !Object.hasOwn(keys, c.key)) {
       return { ok: false, error: `condition ${i}: unknown key "${String(c.key)}"` };
     }
+    const op = operator as ConditionOperator;
+    const spec: ConditionKeySpec = keys[c.key]!;
+    if (isSetOperator(op)) {
+      if (c.value !== undefined) {
+        return { ok: false, error: `condition ${i}: ${op} takes values, not value` };
+      }
+      if (!Array.isArray(c.values) || c.values.length === 0) {
+        return { ok: false, error: `condition ${i}: ${op} needs a non-empty values array` };
+      }
+      if (c.values.some((v) => typeof v !== "string" || v.length === 0)) {
+        return {
+          ok: false,
+          error: `condition ${i}: every entry in values must be a non-empty string`,
+        };
+      }
+      if (OPERATOR_KEY_TYPE[op] !== spec.type) {
+        return {
+          ok: false,
+          error: `condition ${i}: ${op} cannot test ${c.key} (a ${spec.type} key)`,
+        };
+      }
+      if (op === "StringLikeIn") {
+        const bad = (c.values as string[]).find((v) => !isValidLikePattern(v));
+        if (bad !== undefined) {
+          return {
+            ok: false,
+            error: `condition ${i}: like-pattern "${bad}" — only a single trailing * is allowed`,
+          };
+        }
+      }
+      const storedValues = spec.lowercase
+        ? (c.values as string[]).map((v) => v.toLowerCase())
+        : c.values as string[];
+      out.push({ operator: op as string, key: c.key, values: storedValues });
+      continue;
+    }
+    if (c.values !== undefined) {
+      return { ok: false, error: `condition ${i}: ${op} takes value, not values` };
+    }
     if (typeof c.value !== "string" || c.value.length === 0) {
       return { ok: false, error: `condition ${i}: value must be a non-empty string` };
     }
-    const op = operator as ConditionOperator;
-    const spec: ConditionKeySpec = keys[c.key]!;
     if (OPERATOR_KEY_TYPE[op] !== spec.type) {
       return {
         ok: false,

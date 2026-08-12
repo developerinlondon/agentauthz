@@ -52,7 +52,8 @@ class AuthzEvaluator {
         // Deny wins across the whole resolved scope chain — a deny granted at any
         // scope beats an allow inherited from any other; an explicit deny and
         // "nothing matched" both audit as `deny`.
-        const allowed = decide(grants, action, resource, ctx, this.keys, this.options.actionRegistry?.parentOf) === "allow";
+        const allowed = decide(grants, action, resource, ctx, this.keys, this.options.actionRegistry?.parentOf)
+            === "allow";
         this.audit(subjects, action, resource, allowed ? "allow" : "deny", opts);
         return allowed;
     }
@@ -78,7 +79,8 @@ class AuthzEvaluator {
             ...opts?.context,
             ...builtinContextEntries({ now: opts?.now, sourceIp: opts?.sourceIp }),
         });
-        const storedAllows = decide(stored, action, resource, ctx, this.keys, this.options.actionRegistry?.parentOf) === "allow";
+        const storedAllows = decide(stored, action, resource, ctx, this.keys, this.options.actionRegistry?.parentOf)
+            === "allow";
         const fullAllows = decide([...stored, ...synthesized], action, resource, ctx, this.keys, this.options.actionRegistry?.parentOf) === "allow";
         const decision = opts?.bypass ? "admin_bypass" : fullAllows ? "allow" : "deny";
         this.audit(subjects, action, resource, decision, opts);

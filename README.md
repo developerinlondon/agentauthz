@@ -38,7 +38,7 @@ stateful service.
 
 - **Statement** `{effect, actions, resources, conditions?}` — actions from a closed host registry,
   NEVER wildcarded; resources exact or single trailing `*`; conditions typed
-  `{operator, key, value}`, no expression language.
+  `{operator, key, value}` (or `values` for set operators), no expression language.
 - **Grant** = (policy, subject `{kind,id}`, scope `{kind,id}`). A check evaluates against an
   ordered, host-resolved scope chain (root first): every grant at any chain scope applies — **deny
   anywhere beats allow anywhere**; nothing granted ⇒ deny.
@@ -53,6 +53,42 @@ stateful service.
 
 A flat model is supported: leave `scopeKinds` unset and pass a single root scope as
 `defaultScopeChain`. The hierarchy is available, not mandatory.
+
+## Conditions
+
+Conditions are typed triples, never expressions. Scalar operators read `value`; set operators read
+`values`. Exactly one is populated — a condition carrying both is unmatchable rather than a guess at
+which the author meant.
+
+| Operator                                 | Bound    | Key type | Notes                                                    |
+| ---------------------------------------- | -------- | -------- | -------------------------------------------------------- |
+| `StringEquals` / `StringNotEquals`       | `value`  | string   | array context ⇒ set-wise                                 |
+| `StringLike`                             | `value`  | string   | **exact, or one trailing `*`** — not a glob, not a regex |
+| `StringIn` / `StringNotIn`               | `values` | string   | membership; `StringNotIn` is the exact negation          |
+| `StringLikeIn`                           | `values` | string   | membership across trailing-`*` prefix patterns           |
+| `NumericLessThan` / `NumericGreaterThan` | `value`  | number   | **the bound is a string**: `"5"`, not `5`                |
+| `DateLessThan` / `DateGreaterThan`       | `value`  | date     | value must carry `Z` or an explicit offset               |
+| `IpAddress` / `NotIpAddress`             | `value`  | ip       | CIDR membership, IPv4 and IPv6                           |
+
+Two shapes read as working policies but are not, so they are called out rather than left to be
+discovered: `StringLike` is **prefix-only**, so `"infra|lite"` is a literal string that matches
+nothing; and a numeric bound is a **string**, so `value: 5` is a type error that yields an
+unmatchable condition rather than a loud failure. Both are rejected by `validateStatements` on the
+write path.
+
+An allowlist is one condition, not one statement per permitted value:
+
+```ts
+conditions: [
+  { operator: "StringIn", key: "app:Pool", values: ["infra", "lite"] },
+  { operator: "StringEquals", key: "app:Registry", value: "registry.example.com" },
+];
+```
+
+With a list on both sides — a policy list and a multi-valued context key — the semantic is a
+**non-empty intersection**: the request holds at least one permitted value. `StringNotIn` is its
+exact negation, true only when nothing intersects. An empty `values` list is rejected at write time
+and unmatchable at evaluation, so it can never read as a vacuous allow.
 
 ## Action derivation
 
