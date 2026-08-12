@@ -1,0 +1,1 @@
+{"version":3,"file":"config.d.ts","sourceRoot":"","sources":["../../../src/backends/pg/config.ts"],"names":[],"mappings":"AAAA,OAAO,KAAK,EAAE,KAAK,EAAE,MAAM,sBAAsB,CAAC;AAElD,MAAM,WAAW,aAAa;IAG5B,UAAU,EAAE,SAAS,MAAM,EAAE,CAAC;IAI9B,SAAS,EAAE,KAAK,CAAC;IAIjB,kBAAkB,CAAC,EAAE,MAAM,CAAC;CAC7B"}

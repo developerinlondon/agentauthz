@@ -141,3 +141,14 @@ dprint fmt
 ## License
 
 Apache-2.0
+
+## Installing from git
+
+`dist/` is committed so the package resolves without a build step when installed straight from the
+repository — no registry account required:
+
+```sh
+bun add github:developerinlondon/neutron-authz#v0.2.0
+```
+
+Regenerate it with `bun run build` after any change to `src/`.

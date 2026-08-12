@@ -1,5 +1,4 @@
 .omc/
 node_modules/
 .env*
-dist/
 *.tgz
