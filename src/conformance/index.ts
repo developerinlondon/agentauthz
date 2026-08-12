@@ -41,6 +41,9 @@ export interface ConformanceCase {
     sourceIp?: string;
     now?: string;
   };
+  // Declared action derivation for the case, child -> parent. A statement
+  // naming a parent covers every action deriving from it, allow and deny alike.
+  actionDerivation: Record<string, string>;
   expect: "allow" | "deny";
   // false ⇒ this case's grants carry a conditions SHAPE a shape-checking
   // store must refuse at rest (the library's pg backend CHECK-constrains
@@ -53,13 +56,21 @@ interface SuiteFile {
   suite: string;
   conditionKeys?: ConditionKeys;
   scopeKinds?: string[];
+  actionDerivation?: Record<string, string>;
   cases: Array<
     Omit<
       ConformanceCase,
-      "suite" | "conditionKeys" | "scopeKinds" | "grants" | "synthesizedGrants" | "storable"
+      | "suite"
+      | "conditionKeys"
+      | "scopeKinds"
+      | "grants"
+      | "synthesizedGrants"
+      | "storable"
+      | "actionDerivation"
     > & {
       conditionKeys?: ConditionKeys;
       scopeKinds?: string[];
+      actionDerivation?: Record<string, string>;
       storable?: boolean;
       grants?: Array<Partial<ResolvedGrant> & Pick<ResolvedGrant, "subject" | "scope">>;
       synthesizedGrants?: Array<Partial<ResolvedGrant> & Pick<ResolvedGrant, "subject" | "scope">>;
@@ -94,6 +105,7 @@ export function loadConformanceCases(): ConformanceCase[] {
         scopeKinds: c.scopeKinds ?? suite.scopeKinds ?? [],
         grants: normalizeGrants(c.grants, "p"),
         synthesizedGrants: normalizeGrants(c.synthesizedGrants, "synth-p"),
+        actionDerivation: c.actionDerivation ?? suite.actionDerivation ?? {},
         check: c.check,
         expect: c.expect,
         storable: c.storable ?? true,
@@ -101,6 +113,14 @@ export function loadConformanceCases(): ConformanceCase[] {
     }
   }
   return out;
+}
+
+// undefined when a case declares no derivation, so those cases exercise the
+// exact-equality path rather than a lookup that always misses.
+function caseParentLookup(c: ConformanceCase): ((a: string) => string | undefined) | undefined {
+  const map = c.actionDerivation;
+  if (!map || Object.keys(map).length === 0) return undefined;
+  return (action) => map[action];
 }
 
 export type ConformanceImpl = (c: ConformanceCase) => Promise<"allow" | "deny">;
@@ -120,6 +140,7 @@ export const pureEvaluatorImpl: ConformanceImpl = async (c) => {
     }),
     conditionKeys: resolveConditionKeys(c.conditionKeys),
     scopeKinds: c.scopeKinds,
+    actionParentOf: caseParentLookup(c),
   });
 };
 
@@ -140,6 +161,10 @@ export const composedEngineImpl: ConformanceImpl = async (c) => {
       : [],
     conditionKeys: c.conditionKeys,
     scopeKinds: c.scopeKinds,
+    actionRegistry: {
+      isKnownAction: () => true,
+      parentOf: caseParentLookup(c),
+    },
   });
   const allowed = await authz.check(c.check.subjects, c.check.action, c.check.resource, {
     scopeChain: c.check.scopeChain,

@@ -1,4 +1,15 @@
 export {
+  actionAncestry,
+  type ActionCatalogueEntry,
+  ActionCatalogueError,
+  type ActionMatch,
+  type ActionParentLookup,
+  collectDescendants,
+  indexActionCatalogue,
+  matchAction,
+  MAX_DERIVATION_DEPTH,
+} from "./action.js";
+export {
   CONDITION_OPERATORS,
   type ConditionContext,
   type ConditionKeys,

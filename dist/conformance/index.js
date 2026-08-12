@@ -36,6 +36,7 @@ export function loadConformanceCases() {
                 scopeKinds: c.scopeKinds ?? suite.scopeKinds ?? [],
                 grants: normalizeGrants(c.grants, "p"),
                 synthesizedGrants: normalizeGrants(c.synthesizedGrants, "synth-p"),
+                actionDerivation: c.actionDerivation ?? suite.actionDerivation ?? {},
                 check: c.check,
                 expect: c.expect,
                 storable: c.storable ?? true,
@@ -43,6 +44,14 @@ export function loadConformanceCases() {
         }
     }
     return out;
+}
+// undefined when a case declares no derivation, so those cases exercise the
+// exact-equality path rather than a lookup that always misses.
+function caseParentLookup(c) {
+    const map = c.actionDerivation;
+    if (!map || Object.keys(map).length === 0)
+        return undefined;
+    return (action) => map[action];
 }
 // Reference 1: the pure evaluator over the raw grant universe.
 export const pureEvaluatorImpl = async (c) => {
@@ -59,6 +68,7 @@ export const pureEvaluatorImpl = async (c) => {
         }),
         conditionKeys: resolveConditionKeys(c.conditionKeys),
         scopeKinds: c.scopeKinds,
+        actionParentOf: caseParentLookup(c),
     });
 };
 // Reference 2: the composed engine (ports wiring) over an in-memory store —
@@ -78,6 +88,10 @@ export const composedEngineImpl = async (c) => {
             : [],
         conditionKeys: c.conditionKeys,
         scopeKinds: c.scopeKinds,
+        actionRegistry: {
+            isKnownAction: () => true,
+            parentOf: caseParentLookup(c),
+        },
     });
     const allowed = await authz.check(c.check.subjects, c.check.action, c.check.resource, {
         scopeChain: c.check.scopeChain,

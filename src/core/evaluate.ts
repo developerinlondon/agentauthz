@@ -5,10 +5,11 @@
 // executable reference the conformance fixtures run against: a storage
 // backend's filtered `grantsFor` must be decision-identical to this filter.
 
+import { type ActionMatch, type ActionParentLookup, matchAction } from "../model/action.js";
 import type { ConditionContext, ConditionKeys } from "../model/condition.js";
 import type { ResolvedGrant } from "../model/grant.js";
 import { isValidScope, type Scope, type ScopeChain, scopeEquals } from "../model/scope.js";
-import { actionMatches, resourceMatches } from "../model/statement.js";
+import { resourceMatches } from "../model/statement.js";
 import { isValidSubject, type Subject, subjectEquals } from "../model/subject.js";
 import { evalConditions } from "./conditions.js";
 
@@ -28,17 +29,34 @@ function has(
   resource: string,
   ctx: ConditionContext,
   keys: ConditionKeys,
+  parentOf?: ActionParentLookup,
 ): boolean {
   for (const g of grants) {
     for (const s of g.statements) {
       if (s.effect !== effect) continue;
-      if (!s.actions.some((a) => actionMatches(a, action))) continue;
+      // Action matching is tri-state once derivation is in play, and resolves
+      // asymmetrically for the same reason conditions do: an allow needs a
+      // definitive match, a deny also fires on an unresolvable ancestry rather
+      // than quietly ceasing to cover the leaves it names.
+      const actionVerdict = s.actions.reduce<ActionMatch>(
+        (best, a) => best === "match" ? best : worseOf(best, matchAction(a, action, parentOf)),
+        "no-match",
+      );
+      if (effect === "allow" ? actionVerdict !== "match" : actionVerdict === "no-match") continue;
       if (!s.resources.some((r) => resourceMatches(r, resource))) continue;
       const verdict = evalConditions(s.conditions, ctx, keys);
       if (effect === "allow" ? verdict === "match" : verdict !== "no-match") return true;
     }
   }
   return false;
+}
+
+// Across a statement's actions, keep the strongest signal: a definitive match
+// beats an unresolvable walk, which in turn beats a plain no-match.
+function worseOf(a: ActionMatch, b: ActionMatch): ActionMatch {
+  if (a === "match" || b === "match") return "match";
+  if (a === "unresolvable" || b === "unresolvable") return "unresolvable";
+  return "no-match";
 }
 
 // Deny-wins over an already-applicable grant set: an explicit deny beats any
@@ -49,9 +67,10 @@ export function decide(
   resource: string,
   ctx: ConditionContext,
   keys: ConditionKeys,
+  parentOf?: ActionParentLookup,
 ): "allow" | "deny" {
-  if (has(grants, "deny", action, resource, ctx, keys)) return "deny";
-  return has(grants, "allow", action, resource, ctx, keys) ? "allow" : "deny";
+  if (has(grants, "deny", action, resource, ctx, keys, parentOf)) return "deny";
+  return has(grants, "allow", action, resource, ctx, keys, parentOf) ? "allow" : "deny";
 }
 
 // Which of `grants` apply to (subjects, scopeChain)? A grant applies when its
@@ -90,6 +109,8 @@ export interface EvaluateInput {
   conditionKeys: ConditionKeys;
   // When given, every chain entry's kind must be one of these.
   scopeKinds?: readonly string[];
+  // Host-declared action derivation; absent ⇒ actions match exactly.
+  actionParentOf?: ActionParentLookup;
 }
 
 // The pure end-to-end decision: validate inputs fail-closed, filter the
@@ -104,5 +125,12 @@ export function evaluate(input: EvaluateInput): "allow" | "deny" {
   // letting it near the comparison at all.
   const subjects = Array.isArray(input.subjects) ? input.subjects.filter(isValidSubject) : [];
   const grants = applicableGrants(input.grants, subjects, input.scopeChain);
-  return decide(grants, input.action, input.resource, input.context, input.conditionKeys);
+  return decide(
+    grants,
+    input.action,
+    input.resource,
+    input.context,
+    input.conditionKeys,
+    input.actionParentOf,
+  );
 }

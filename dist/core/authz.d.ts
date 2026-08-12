@@ -2,7 +2,7 @@ import type { ConditionKeys } from "../model/condition.js";
 import type { ResolvedGrant } from "../model/grant.js";
 import { type ScopeChain } from "../model/scope.js";
 import type { Subject } from "../model/subject.js";
-import type { AuditSink, GrantStore, ScopeRoleSynthesizer } from "../ports/index.js";
+import type { ActionRegistry, AuditSink, GrantStore, ScopeRoleSynthesizer } from "../ports/index.js";
 export interface CheckOpts {
     source?: string;
     silent?: boolean;
@@ -30,6 +30,7 @@ export interface AuthzOptions {
     defaultScopeChain?: ScopeChain;
     synthesizers?: readonly ScopeRoleSynthesizer[];
     auditSink?: AuditSink;
+    actionRegistry?: ActionRegistry;
 }
 export declare function makeAuthz(options: AuthzOptions): Authz;
 //# sourceMappingURL=authz.d.ts.map

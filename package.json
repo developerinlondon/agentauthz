@@ -1,6 +1,6 @@
 {
   "name": "neutron-authz",
-  "version": "0.2.0",
+  "version": "0.3.0",
   "description": "Embeddable authorization engine for TypeScript: policy statements, grants-at-scope, typed ABAC conditions, deny-wins, asymmetric fail-closed. Policies live as rows in your own Postgres.",
   "license": "Apache-2.0",
   "author": "Nayeem Syed",

@@ -54,6 +54,44 @@ stateful service.
 A flat model is supported: leave `scopeKinds` unset and pass a single root scope as
 `defaultScopeChain`. The hierarchy is available, not mandatory.
 
+## Action derivation
+
+A host with a large action vocabulary would otherwise enumerate every action in every statement that
+morally covers it — so adding an endpoint means revisiting every policy, and the failure is silent
+in both directions. A host may instead declare that one action derives from another:
+
+```ts
+import { actionRegistryFromCatalogue } from "neutron-authz/ports";
+
+const actions = actionRegistryFromCatalogue([
+  { action: "edit" },
+  { action: "docs.update", derivesFrom: "edit" },
+  { action: "docs.delete", derivesFrom: "docs.update" },
+]);
+
+actions.descendantsOf("edit"); // ["docs.delete", "docs.update"]
+```
+
+A statement naming `edit` now covers both, transitively. Three properties make this safe:
+
+- **It is not a wildcard.** A wildcard matches unknown and future actions; a derivation expands to a
+  declared, closed, enumerable set whose every member `isKnownAction` still gates. `descendantsOf`
+  lists exactly what a statement permits, so a UI can render the 21 actions rather than `edit *`.
+- **Deny expands exactly as allow does.** A deny naming `edit` stops everything deriving from it.
+  The alternative — deny matching exactly while allow expands — would make deny narrower than allow
+  and invert the engine's posture.
+- **Derivation is registry data, not policy data.** A policy author, human or model, cannot invent
+  one. The catalogue rejects cycles, self-derivation and unknown parents when it is built.
+
+Derivation never runs downward or sideways: granting `docs.delete` does not grant `edit`, and a
+separate tree is untouched. Actions are single-parent, because deny expands too — multiple parents
+would let a deny on any ancestor silently kill a leaf.
+
+If an ancestry cannot be resolved (a cycle reaching a hand-rolled `parentOf`), the match is
+`unresolvable` rather than absent, and it resolves asymmetrically like a condition: an allow needs a
+definitive match, a deny fires anyway. A deny never stops covering its leaves because a lookup
+misbehaved.
+
 ## Untrusted policy authors
 
 The engine has no expression language on purpose. Actions come from a closed registry the host
