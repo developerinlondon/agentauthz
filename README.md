@@ -1,11 +1,18 @@
-# neutron-authz
+# @neutroncore/authz
 
 Embeddable TypeScript authorization engine: policy statements + grants-at-scope + typed ABAC
 conditions, deny-wins, asymmetric fail-closed. **Policies are rows in your own database**, authored
 at runtime — by an admin UI, or by an agent — not files compiled into a deployment.
 
 ```sh
-npm install neutron-authz
+npm install @neutroncore/authz     # or: bun add / pnpm add / yarn add
+```
+
+Ships compiled ESM with type declarations, so plain Node (>=20) can consume it — no TypeScript
+runtime or bundler required. `kysely` is an optional peer, needed only for the Postgres backend:
+
+```sh
+npm install @neutroncore/authz kysely
 ```
 
 ```text
@@ -97,7 +104,7 @@ morally covers it — so adding an endpoint means revisiting every policy, and t
 in both directions. A host may instead declare that one action derives from another:
 
 ```ts
-import { actionRegistryFromCatalogue } from "neutron-authz/ports";
+import { actionRegistryFromCatalogue } from "@neutroncore/authz/ports";
 
 const actions = actionRegistryFromCatalogue([
   { action: "edit" },
@@ -137,7 +144,7 @@ policy author cannot smuggle in evaluation logic.
 That makes agent-drafted policy tractable:
 
 ```ts
-import { repairDraft, validateStatements } from "neutron-authz/core";
+import { repairDraft, validateStatements } from "@neutroncore/authz/core";
 
 // Model output is never trusted. Hallucinated actions and unknown resources are
 // dropped statement-by-statement; a draft left with no statements is rejected.
@@ -154,8 +161,8 @@ deliberate divergence from Cedar, which ignores erroring policies in both direct
 ## Usage
 
 ```ts
-import { AuthzMigrationProvider, PgAuthzStore } from "neutron-authz/backends/pg";
-import { makeAuthz } from "neutron-authz/core";
+import { AuthzMigrationProvider, PgAuthzStore } from "@neutroncore/authz/backends/pg";
+import { makeAuthz } from "@neutroncore/authz/core";
 
 const config = { scopeKinds: ["root", "space"], rootScope: { kind: "root", id: "*" } };
 // Apply migrations into YOUR db (Kysely Migrator + AuthzMigrationProvider(config)),
@@ -212,17 +219,17 @@ bunx tsc --noEmit       # TypeScript 7 native typecheck
 dprint fmt
 ```
 
-## License
-
-Apache-2.0
-
 ## Installing from git
 
-`dist/` is committed so the package resolves without a build step when installed straight from the
-repository — no registry account required:
+The registry is the normal path. Installing straight from the repository also works — `dist/` is
+committed, so it resolves without a build step:
 
 ```sh
-bun add github:developerinlondon/neutron-authz#v0.2.0
+bun add github:developerinlondon/neutron-authz#v0.3.1
 ```
 
 Regenerate it with `bun run build` after any change to `src/`.
+
+## License
+
+Apache-2.0
