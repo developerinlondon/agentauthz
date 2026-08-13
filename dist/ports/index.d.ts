@@ -5,47 +5,45 @@ import type { ScopeChain } from "../model/scope.js";
 import type { Subject } from "../model/subject.js";
 export type { ConditionKeys };
 export interface ActionRegistry {
-  isKnownAction(action: string): boolean;
-  parentOf?: ActionParentLookup;
-  descendantsOf?(action: string): string[];
-  listActions?(): string[];
+    isKnownAction(action: string): boolean;
+    parentOf?: ActionParentLookup;
+    descendantsOf?(action: string): string[];
+    listActions?(): string[];
 }
 export declare function actionRegistryFromList(actions: readonly string[]): ActionRegistry;
-export declare function actionRegistryFromCatalogue(
-  entries: readonly ActionCatalogueEntry[],
-): ActionRegistry;
+export declare function actionRegistryFromCatalogue(entries: readonly ActionCatalogueEntry[]): ActionRegistry;
 export interface GrantSource {
-  grantsFor(subjects: readonly Subject[], scopeChain: ScopeChain): Promise<ResolvedGrant[]>;
+    grantsFor(subjects: readonly Subject[], scopeChain: ScopeChain): Promise<ResolvedGrant[]>;
 }
 export type ScopeRoleSynthesizer = GrantSource;
 export interface GrantStore extends GrantSource {
-  createGrant(input: {
-    policyId: string;
-    subject: Subject;
-    scope: {
-      kind: string;
-      id: string;
-    };
-    bounds?: GrantBounds;
-    createdBy: string | null;
-  }): Promise<void>;
-  deleteGrant(id: string): Promise<boolean>;
-  deleteGrantsForSubject(subject: Subject): Promise<number>;
-  deleteGrantsForPolicy(policyId: string): Promise<number>;
+    createGrant(input: {
+        policyId: string;
+        subject: Subject;
+        scope: {
+            kind: string;
+            id: string;
+        };
+        bounds?: GrantBounds;
+        createdBy: string | null;
+    }): Promise<void>;
+    deleteGrant(id: string): Promise<boolean>;
+    deleteGrantsForSubject(subject: Subject): Promise<number>;
+    deleteGrantsForPolicy(policyId: string): Promise<number>;
 }
 export type AuditDecision = "allow" | "deny" | "admin_bypass" | "executed";
 export interface AuditEvent {
-  subjects: readonly Subject[];
-  action: string;
-  resource: string;
-  decision: AuditDecision;
-  source: string;
-  detail: Record<string, unknown> | null;
+    subjects: readonly Subject[];
+    action: string;
+    resource: string;
+    decision: AuditDecision;
+    source: string;
+    detail: Record<string, unknown> | null;
 }
 export interface AuditSink {
-  record(event: AuditEvent): void;
+    record(event: AuditEvent): void;
 }
 export interface SubjectDirectory {
-  exists(subject: Subject): Promise<boolean>;
+    exists(subject: Subject): Promise<boolean>;
 }
-// # sourceMappingURL=index.d.ts.map
+//# sourceMappingURL=index.d.ts.map

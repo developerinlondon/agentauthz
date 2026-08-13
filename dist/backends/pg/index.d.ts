@@ -1,9 +1,4 @@
 export type { PgAuthzConfig } from "./config.js";
-export {
-  applyAuthzMigrations,
-  AuthzMigrationProvider,
-  authzMigrations,
-  revertAuthzMigrations,
-} from "./migrations.js";
+export { applyAuthzMigrations, AuthzMigrationProvider, authzMigrations, revertAuthzMigrations, } from "./migrations.js";
 export { type AuditRecord, PgAuthzStore, type PolicySummary, SystemPolicyError } from "./store.js";
-// # sourceMappingURL=index.d.ts.map
+//# sourceMappingURL=index.d.ts.map
