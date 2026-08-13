@@ -1,5 +1,5 @@
 {
-  "name": "neutron-authz",
+  "name": "@neutroncore/authz",
   "version": "0.3.1",
   "description": "Embeddable authorization engine for TypeScript: policy statements, grants-at-scope, typed ABAC conditions, deny-wins, asymmetric fail-closed. Policies live as rows in your own Postgres.",
   "license": "Apache-2.0",

@@ -382,10 +382,16 @@ export function validateConditions(input, keys) {
                 return { ok: false, error: `condition ${i}: ${op} needs a non-empty values array` };
             }
             if (c.values.some((v) => typeof v !== "string" || v.length === 0)) {
-                return { ok: false, error: `condition ${i}: every entry in values must be a non-empty string` };
+                return {
+                    ok: false,
+                    error: `condition ${i}: every entry in values must be a non-empty string`,
+                };
             }
             if (OPERATOR_KEY_TYPE[op] !== spec.type) {
-                return { ok: false, error: `condition ${i}: ${op} cannot test ${c.key} (a ${spec.type} key)` };
+                return {
+                    ok: false,
+                    error: `condition ${i}: ${op} cannot test ${c.key} (a ${spec.type} key)`,
+                };
             }
             if (op === "StringLikeIn") {
                 const bad = c.values.find((v) => !isValidLikePattern(v));
