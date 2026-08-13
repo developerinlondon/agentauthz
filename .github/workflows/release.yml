@@ -1,0 +1,67 @@
+name: release
+
+on:
+  push:
+    tags: ["v*"]
+  workflow_dispatch:
+
+jobs:
+  publish:
+    runs-on: ubuntu-latest
+    permissions:
+      # The OIDC token npm exchanges for a short-lived publish credential.
+      # Without it the handshake never happens and npm falls back to hunting
+      # for a token that does not exist.
+      id-token: write
+      contents: read
+
+    services:
+      postgres:
+        image: postgres:18-alpine
+        env:
+          POSTGRES_PASSWORD: postgres
+        ports: ["5432:5432"]
+        options: >-
+          --health-cmd pg_isready --health-interval 5s
+          --health-timeout 5s --health-retries 10
+
+    env:
+      DATABASE_URL: postgres://postgres:postgres@127.0.0.1:5432/postgres
+
+    steps:
+      - uses: actions/checkout@v5
+
+      - uses: oven-sh/setup-bun@v2
+        with:
+          bun-version: latest
+
+      - uses: actions/setup-node@v5
+        with:
+          node-version: "22"
+          registry-url: "https://registry.npmjs.org"
+
+      # Trusted publishing needs npm >= 11.5.1; the npm bundled with Node 22
+      # predates it and fails the handshake as a plain auth error.
+      - run: npm install -g npm@latest
+
+      - run: bun install --frozen-lockfile
+
+      - run: bunx tsc --noEmit
+
+      # Whole suite, including the storage-backed conformance runner — the
+      # release gate is the same contract an alternative backend must pass.
+      - run: bun test
+
+      # Refuse a tag whose version disagrees with package.json, so v0.4.0 can
+      # never quietly republish 0.3.1.
+      - name: Tag matches package version
+        run: |
+          tag="${GITHUB_REF_NAME#v}"
+          pkg="$(node -p "require('./package.json').version")"
+          if [ "$tag" != "$pkg" ]; then
+            echo "tag $GITHUB_REF_NAME does not match package.json $pkg" >&2
+            exit 1
+          fi
+
+      # No NODE_AUTH_TOKEN: the OIDC handshake supplies the credential.
+      - run: npm publish
