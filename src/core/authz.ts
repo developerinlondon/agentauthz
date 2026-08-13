@@ -6,6 +6,7 @@
 // config flips with zero call-site churn.
 
 import type { ConditionKeys } from "../model/condition.js";
+import type { AuthzDescriptor } from "../model/descriptor.js";
 import type { ResolvedGrant } from "../model/grant.js";
 import { isValidScope, type Scope, type ScopeChain } from "../model/scope.js";
 import type { Subject } from "../model/subject.js";
@@ -17,6 +18,7 @@ import type {
   ScopeRoleSynthesizer,
 } from "../ports/index.js";
 import { builtinContextEntries, makeConditionContext, resolveConditionKeys } from "./conditions.js";
+import { describeAuthz } from "./describe.js";
 import { decide } from "./evaluate.js";
 
 export interface CheckOpts {
@@ -88,6 +90,8 @@ export interface Authz {
   // The grants effective for these subjects over a chain, for a "why" view.
   // Bypass is not materialised here — it's a check()-time rule.
   listGrantsFor(subjects: readonly Subject[], scopeChain?: ScopeChain): Promise<ResolvedGrant[]>;
+  // This engine's declared vocabulary as data, for an administration surface.
+  describe(): AuthzDescriptor;
 }
 
 export interface AuthzOptions {
@@ -225,6 +229,14 @@ class AuthzEvaluator implements Authz {
     if (!Array.isArray(chain) || chain.some((s) => !this.knownScope(s))) return [];
     const valid = Array.isArray(subjects) ? subjects.filter(isValidSubject) : [];
     return await this.resolveGrants(valid, chain);
+  }
+
+  describe(): AuthzDescriptor {
+    return describeAuthz({
+      actionRegistry: this.options.actionRegistry,
+      conditionKeys: this.options.conditionKeys,
+      scopeKinds: this.options.scopeKinds,
+    });
   }
 
   private knownScope(scope: unknown): boolean {

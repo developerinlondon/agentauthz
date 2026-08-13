@@ -1,3 +1,4 @@
+import type { PolicyCondition } from "./condition.js";
 import type { Scope } from "./scope.js";
 import type { PolicyStatement } from "./statement.js";
 import type { Subject } from "./subject.js";
@@ -18,12 +19,18 @@ export interface PolicyRecord {
   updatedAt: string;
 }
 
+// Conditions carried by the GRANT, so one curated policy is attachable with
+// different limits per subject. They narrow ALLOW statements only: ANDing a
+// bound onto a deny would make it fire less often — widening access.
+export type GrantBounds = PolicyCondition[];
+
 export interface GrantRecord {
   id: string;
   policyId: string;
   policyName: string;
   subject: Subject;
   scope: Scope;
+  bounds?: GrantBounds;
   createdBy: string | null;
   createdAt: string;
 }
@@ -36,4 +43,5 @@ export interface ResolvedGrant {
   subject: Subject;
   scope: Scope;
   statements: PolicyStatement[];
+  bounds?: GrantBounds;
 }

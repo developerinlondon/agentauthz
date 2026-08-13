@@ -1,6 +1,6 @@
 {
   "name": "@neutroncore/authz",
-  "version": "0.3.2",
+  "version": "0.4.0",
   "description": "Embeddable authorization engine for TypeScript: policy statements, grants-at-scope, typed ABAC conditions, deny-wins, asymmetric fail-closed. Policies live as rows in your own Postgres.",
   "license": "Apache-2.0",
   "author": "Nayeem Syed",
@@ -42,6 +42,14 @@
       "types": "./dist/ports/index.d.ts",
       "import": "./dist/ports/index.js"
     },
+    "./ui": {
+      "types": "./dist/ui/index.d.ts",
+      "import": "./dist/ui/index.js"
+    },
+    "./admin": {
+      "types": "./dist/admin/index.d.ts",
+      "import": "./dist/admin/index.js"
+    },
     "./conformance": {
       "types": "./dist/conformance/index.d.ts",
       "import": "./dist/conformance/index.js"
@@ -58,24 +66,33 @@
     "node": ">=20"
   },
   "scripts": {
-    "build": "rm -rf dist && tsc -p tsconfig.build.json && cp -R src/conformance/cases dist/conformance/cases",
+    "build": "rm -rf dist && tsc -p tsconfig.build.json && cp -R src/conformance/cases dist/conformance/cases && cp -R src/conformance/descriptor dist/conformance/descriptor",
+    "prepack": "bun run build",
     "prepublishOnly": "bun run build",
     "test": "bun test",
     "typecheck": "tsc --noEmit"
   },
   "peerDependencies": {
-    "kysely": ">=0.28"
+    "kysely": ">=0.28",
+    "react": ">=18"
   },
   "peerDependenciesMeta": {
     "kysely": {
+      "optional": true
+    },
+    "react": {
       "optional": true
     }
   },
   "devDependencies": {
     "@types/bun": "^1.3.14",
     "@types/pg": "^8.20.0",
+    "@types/react": "^19.2.18",
+    "@types/react-dom": "^19.2.4",
     "kysely": "^0.29.2",
     "pg": "^8.22.0",
+    "react": "^19.2.8",
+    "react-dom": "^19.2.8",
     "typescript": "7.0.2"
   },
   "publishConfig": {

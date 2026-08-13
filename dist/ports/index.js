@@ -5,7 +5,10 @@
 import { collectDescendants, indexActionCatalogue, } from "../model/action.js";
 export function actionRegistryFromList(actions) {
     const set = new Set(actions);
-    return { isKnownAction: (action) => set.has(action) };
+    return {
+        isKnownAction: (action) => set.has(action),
+        listActions: () => [...set],
+    };
 }
 // Builds a registry from a declared catalogue, validating that every parent is
 // itself declared and that the graph is acyclic. Throws on a bad vocabulary.
@@ -15,6 +18,7 @@ export function actionRegistryFromCatalogue(entries) {
         isKnownAction: (action) => actions.has(action),
         parentOf: (action) => parents.get(action),
         descendantsOf: (action) => collectDescendants(children, action),
+        listActions: () => [...actions],
     };
 }
 //# sourceMappingURL=index.js.map

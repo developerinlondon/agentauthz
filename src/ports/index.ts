@@ -10,7 +10,7 @@ import {
   indexActionCatalogue,
 } from "../model/action.js";
 import type { ConditionKeys } from "../model/condition.js";
-import type { ResolvedGrant } from "../model/grant.js";
+import type { GrantBounds, ResolvedGrant } from "../model/grant.js";
 import type { ScopeChain } from "../model/scope.js";
 import type { Subject } from "../model/subject.js";
 
@@ -26,11 +26,17 @@ export interface ActionRegistry {
   // Everything deriving transitively from `action`, so a host can render the
   // exact set a statement permits instead of an opaque coarse name.
   descendantsOf?(action: string): string[];
+  // Declaration order, for describeAuthz. Optional so a hand-rolled registry
+  // that can only answer isKnownAction stays valid.
+  listActions?(): string[];
 }
 
 export function actionRegistryFromList(actions: readonly string[]): ActionRegistry {
   const set = new Set(actions);
-  return { isKnownAction: (action) => set.has(action) };
+  return {
+    isKnownAction: (action) => set.has(action),
+    listActions: () => [...set],
+  };
 }
 
 // Builds a registry from a declared catalogue, validating that every parent is
@@ -43,6 +49,7 @@ export function actionRegistryFromCatalogue(
     isKnownAction: (action) => actions.has(action),
     parentOf: (action) => parents.get(action),
     descendantsOf: (action) => collectDescendants(children, action),
+    listActions: () => [...actions],
   };
 }
 
@@ -70,6 +77,9 @@ export interface GrantStore extends GrantSource {
     policyId: string;
     subject: Subject;
     scope: { kind: string; id: string; };
+    // Re-granting with different bounds REPLACES them; omitting the field
+    // clears them, so a store never silently keeps a stale limit.
+    bounds?: GrantBounds;
     createdBy: string | null;
   }): Promise<void>;
   deleteGrant(id: string): Promise<boolean>;

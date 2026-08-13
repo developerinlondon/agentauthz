@@ -1,0 +1,16 @@
+{
+  "actions": [
+    { "action": "widgets.read" },
+    { "action": "widgets.list", "derivesFrom": "widgets.read" },
+    { "action": "widgets.write", "derivesFrom": "widgets.read" },
+    { "action": "widgets.publish", "derivesFrom": "widgets.write" },
+    { "action": "audit.read" }
+  ],
+  "conditionKeys": {
+    "app:Region": { "type": "string", "lowercase": true },
+    "app:MaxCpu": { "type": "number" },
+    "app:Cidr": { "type": "ip" },
+    "app:NotBefore": { "type": "date" }
+  },
+  "scopeKinds": ["root", "project"]
+}

@@ -21,7 +21,13 @@ export {
   type PolicyCondition,
   SET_OPERATORS,
 } from "./condition.js";
-export type { GrantRecord, PolicyRecord, ResolvedGrant } from "./grant.js";
+export {
+  type AuthzDescriptor,
+  type DescribedAction,
+  type DescribedConditionKey,
+  DESCRIPTOR_VERSION,
+} from "./descriptor.js";
+export type { GrantBounds, GrantRecord, PolicyRecord, ResolvedGrant } from "./grant.js";
 export { isValidScope, type Scope, type ScopeChain, scopeEquals } from "./scope.js";
 export {
   actionMatches,

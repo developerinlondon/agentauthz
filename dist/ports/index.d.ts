@@ -1,6 +1,6 @@
 import { type ActionCatalogueEntry, type ActionParentLookup } from "../model/action.js";
 import type { ConditionKeys } from "../model/condition.js";
-import type { ResolvedGrant } from "../model/grant.js";
+import type { GrantBounds, ResolvedGrant } from "../model/grant.js";
 import type { ScopeChain } from "../model/scope.js";
 import type { Subject } from "../model/subject.js";
 export type { ConditionKeys };
@@ -8,6 +8,7 @@ export interface ActionRegistry {
     isKnownAction(action: string): boolean;
     parentOf?: ActionParentLookup;
     descendantsOf?(action: string): string[];
+    listActions?(): string[];
 }
 export declare function actionRegistryFromList(actions: readonly string[]): ActionRegistry;
 export declare function actionRegistryFromCatalogue(entries: readonly ActionCatalogueEntry[]): ActionRegistry;
@@ -23,6 +24,7 @@ export interface GrantStore extends GrantSource {
             kind: string;
             id: string;
         };
+        bounds?: GrantBounds;
         createdBy: string | null;
     }): Promise<void>;
     deleteGrant(id: string): Promise<boolean>;

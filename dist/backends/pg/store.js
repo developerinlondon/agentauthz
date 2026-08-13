@@ -60,6 +60,7 @@ export class PgAuthzStore {
             "authz_grants.subject_id as subject_id",
             "authz_grants.scope_kind as scope_kind",
             "authz_grants.scope_id as scope_id",
+            "authz_grants.bounds as bounds",
         ])
             .where((eb) => eb.or(subjects.map((s) => eb.and([
             eb("authz_grants.subject_kind", "=", s.kind),
@@ -76,6 +77,9 @@ export class PgAuthzStore {
             subject: { kind: r.subject_kind, id: r.subject_id },
             scope: { kind: r.scope_kind, id: r.scope_id },
             statements: r.statements,
+            ...(r.bounds === null || r.bounds === undefined
+                ? {}
+                : { bounds: r.bounds }),
         }));
     }
     // -------------------------------------------------------------------------
@@ -85,6 +89,7 @@ export class PgAuthzStore {
     // scope) is a no-op. A root-kind scope is normalized to the canonical root
     // id.
     async createGrant(input) {
+        const bounds = input.bounds === undefined ? null : JSON.stringify(input.bounds);
         await this.db.insertInto("authz_grants")
             .values({
             id: crypto.randomUUID(),
@@ -95,10 +100,13 @@ export class PgAuthzStore {
             scope_id: input.scope.kind === this.config.rootScope.kind
                 ? this.config.rootScope.id
                 : input.scope.id,
+            bounds,
             created_by: input.createdBy,
         })
+            // Bounds are UPDATED on conflict rather than ignored: an admin
+            // re-granting to tighten a limit must not silently keep the old one.
             .onConflict((oc) => oc.columns(["policy_id", "subject_kind", "subject_id", "scope_kind", "scope_id"])
-            .doNothing())
+            .doUpdateSet({ bounds }))
             .execute();
     }
     async getGrant(id) {
@@ -113,6 +121,10 @@ export class PgAuthzStore {
             q = q.where("authz_grants.scope_id", "=", filter.scopeId);
         if (filter.policyId)
             q = q.where("authz_grants.policy_id", "=", filter.policyId);
+        if (filter.subjectKind)
+            q = q.where("authz_grants.subject_kind", "=", filter.subjectKind);
+        if (filter.subjectId)
+            q = q.where("authz_grants.subject_id", "=", filter.subjectId);
         const rows = await q
             .orderBy("authz_grants.scope_kind", "asc").orderBy("authz_grants.scope_id", "asc")
             .orderBy("authz_grants.subject_kind", "asc").orderBy("authz_grants.subject_id", "asc")
@@ -339,6 +351,7 @@ export class PgAuthzStore {
             "authz_grants.subject_id as subject_id",
             "authz_grants.scope_kind as scope_kind",
             "authz_grants.scope_id as scope_id",
+            "authz_grants.bounds as bounds",
             "authz_grants.created_by as created_by",
             "authz_grants.created_at as created_at",
         ]);
@@ -350,6 +363,9 @@ export class PgAuthzStore {
             policyName: row.policy_name,
             subject: { kind: row.subject_kind, id: row.subject_id },
             scope: { kind: row.scope_kind, id: row.scope_id },
+            ...(row.bounds === null || row.bounds === undefined
+                ? {}
+                : { bounds: row.bounds }),
             createdBy: row.created_by,
             createdAt: iso(row.created_at),
         };

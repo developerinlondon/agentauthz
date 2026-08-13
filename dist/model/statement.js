@@ -1,11 +1,5 @@
-// Policy statements — THE SPEC. A statement is {effect, actions, resources,
-// conditions?}: actions are drawn from a closed, host-declared registry and
-// NEVER carry wildcards; resources are opaque strings matched exactly or via a
-// single trailing `*` (a prefix wildcard); conditions are typed {operator,
-// key, value} narrowings (see model/condition.ts) evaluated fail-closed by
-// the core engine. These rules fail closed at policy-save time
-// (core/validate.ts validateStatements) so a bad document can never widen
-// authority silently.
+// Policy statements. The model and its rationale are documented in the
+// README under "Semantics (the contract)"; what follows is the enforcement.
 // A statement action is valid iff the host-declared registry knows it. Any `*`
 // disqualifies it — actions never carry wildcards (resources do, see below).
 export function isValidAction(action, isKnownAction) {

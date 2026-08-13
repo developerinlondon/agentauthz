@@ -1,3 +1,3 @@
-export { AuthzMigrationProvider, authzMigrations } from "./migrations.js";
+export { applyAuthzMigrations, AuthzMigrationProvider, authzMigrations, revertAuthzMigrations, } from "./migrations.js";
 export { PgAuthzStore, SystemPolicyError } from "./store.js";
 //# sourceMappingURL=index.js.map
