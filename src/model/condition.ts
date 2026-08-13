@@ -1,9 +1,6 @@
-// Condition shapes and whitelists — THE SPEC. A condition is {operator, key,
-// value} — NEVER free expression code — where the operator comes from
-// CONDITION_OPERATORS (closed here) and the key from the host-declared
-// ConditionKeys merged with the built-in request:* keys (core/conditions.ts).
-// Each key declares the type its context value carries, which fixes the
-// operator family allowed on it.
+// Condition shapes and whitelists. The operator table and its semantics are
+// documented in the README under "Conditions"; what follows is the closed set
+// the engine will accept — a condition is never free expression code.
 
 export const CONDITION_OPERATORS = [
   "StringEquals",

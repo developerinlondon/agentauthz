@@ -55,6 +55,11 @@ stateful service.
   fail-closed**: an allow contributes only on a definitive match; a deny fires on match AND on
   unmatchable (an unevaluable deny stays standing). Malformed input — scope chain, subjects,
   condition shapes — always denies.
+- **Two enforcement points, same rules.** `validateStatements` rejects a bad document at save time,
+  and the evaluator re-checks shape fail-closed at decision time — so a row written by an older code
+  path, a migration or a future bug still cannot widen authority silently. Each condition key
+  declares the type its context value carries, and that type fixes which operator family may test
+  it.
 - **Role synthesis**: app-owned role rows become grants at check time via `ScopeRoleSynthesizer` —
   one storage, no dual-write; synthesized grants join the same deny-wins union.
 - The host keeps, permanently: authn → subjects resolution, admin-bypass decision (`bypass` check
