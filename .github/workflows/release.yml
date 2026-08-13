@@ -35,10 +35,12 @@ jobs:
         with:
           bun-version: latest
 
+      # No registry-url: it makes setup-node write an .npmrc pinning
+      # _authToken to the placeholder NODE_AUTH_TOKEN, and npm then publishes
+      # with that bogus credential instead of performing the OIDC exchange.
       - uses: actions/setup-node@v5
         with:
           node-version: "22"
-          registry-url: "https://registry.npmjs.org"
 
       # Trusted publishing needs npm >= 11.5.1; the npm bundled with Node 22
       # predates it and fails the handshake as a plain auth error.
