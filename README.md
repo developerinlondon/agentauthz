@@ -225,10 +225,25 @@ The registry is the normal path. Installing straight from the repository also wo
 committed, so it resolves without a build step:
 
 ```sh
-bun add github:developerinlondon/neutron-authz#v0.3.1
+bun add github:developerinlondon/neutron-authz#v0.3.2
 ```
 
 Regenerate it with `bun run build` after any change to `src/`.
+
+## Releasing
+
+Bump `version` in `package.json`, merge, then push a matching tag:
+
+```sh
+git tag v0.3.2 && git push origin v0.3.2
+```
+
+The release workflow builds, typechecks and runs the whole suite — including the storage-backed
+conformance runner against a Postgres service — then publishes. It refuses a tag whose version
+disagrees with `package.json`, so a mistagged release cannot silently republish the previous one.
+
+Publishing uses npm trusted publishing: GitHub exchanges an OIDC token for a short-lived credential,
+so no npm token exists in the repository, in CI, or on a developer's machine.
 
 ## License
 
