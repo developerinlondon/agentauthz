@@ -1,6 +1,6 @@
 {
   "name": "@neutroncore/authz",
-  "version": "0.3.2",
+  "version": "0.4.0",
   "description": "Embeddable authorization engine for TypeScript: policy statements, grants-at-scope, typed ABAC conditions, deny-wins, asymmetric fail-closed. Policies live as rows in your own Postgres.",
   "license": "Apache-2.0",
   "author": "Nayeem Syed",
@@ -58,7 +58,7 @@
     "node": ">=20"
   },
   "scripts": {
-    "build": "rm -rf dist && tsc -p tsconfig.build.json && cp -R src/conformance/cases dist/conformance/cases",
+    "build": "rm -rf dist && tsc -p tsconfig.build.json && cp -R src/conformance/cases dist/conformance/cases && cp -R src/conformance/descriptor dist/conformance/descriptor",
     "prepublishOnly": "bun run build",
     "test": "bun test",
     "typecheck": "tsc --noEmit"

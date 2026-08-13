@@ -1,5 +1,5 @@
 import { type ColumnType, type Generated, type Kysely, sql } from "kysely";
-import type { GrantRecord, PolicyRecord, ResolvedGrant } from "../../model/grant.js";
+import type { GrantBounds, GrantRecord, PolicyRecord, ResolvedGrant } from "../../model/grant.js";
 import type { Scope, ScopeChain } from "../../model/scope.js";
 import type { PolicyStatement } from "../../model/statement.js";
 import type { Subject } from "../../model/subject.js";
@@ -36,6 +36,7 @@ interface Tables {
     subject_id: string;
     scope_kind: string;
     scope_id: string;
+    bounds: ColumnType<unknown, string | null, string | null>;
     created_by: string | null;
     created_at: Generated<Date | string>;
   };
@@ -130,6 +131,7 @@ export class PgAuthzStore implements GrantStore {
         "authz_grants.subject_id as subject_id",
         "authz_grants.scope_kind as scope_kind",
         "authz_grants.scope_id as scope_id",
+        "authz_grants.bounds as bounds",
       ])
       .where((eb) =>
         eb.or(subjects.map((s) =>
@@ -154,6 +156,9 @@ export class PgAuthzStore implements GrantStore {
       subject: { kind: r.subject_kind, id: r.subject_id },
       scope: { kind: r.scope_kind, id: r.scope_id },
       statements: r.statements as PolicyStatement[],
+      ...(r.bounds === null || r.bounds === undefined
+        ? {}
+        : { bounds: r.bounds as GrantBounds }),
     }));
   }
 
@@ -168,8 +173,10 @@ export class PgAuthzStore implements GrantStore {
     policyId: string;
     subject: Subject;
     scope: Scope;
+    bounds?: GrantBounds;
     createdBy: string | null;
   }): Promise<void> {
+    const bounds = input.bounds === undefined ? null : JSON.stringify(input.bounds);
     await this.db.insertInto("authz_grants")
       .values({
         id: crypto.randomUUID(),
@@ -180,11 +187,14 @@ export class PgAuthzStore implements GrantStore {
         scope_id: input.scope.kind === this.config.rootScope.kind
           ? this.config.rootScope.id
           : input.scope.id,
+        bounds,
         created_by: input.createdBy,
       })
+      // Bounds are UPDATED on conflict rather than ignored: an admin
+      // re-granting to tighten a limit must not silently keep the old one.
       .onConflict((oc) =>
         oc.columns(["policy_id", "subject_kind", "subject_id", "scope_kind", "scope_id"])
-          .doNothing()
+          .doUpdateSet({ bounds })
       )
       .execute();
   }
@@ -461,6 +471,7 @@ export class PgAuthzStore implements GrantStore {
         "authz_grants.subject_id as subject_id",
         "authz_grants.scope_kind as scope_kind",
         "authz_grants.scope_id as scope_id",
+        "authz_grants.bounds as bounds",
         "authz_grants.created_by as created_by",
         "authz_grants.created_at as created_at",
       ]);
@@ -474,6 +485,7 @@ export class PgAuthzStore implements GrantStore {
     subject_id: string;
     scope_kind: string;
     scope_id: string;
+    bounds: unknown;
     created_by: string | null;
     created_at: Date | string;
   }): GrantRecord {
@@ -483,6 +495,9 @@ export class PgAuthzStore implements GrantStore {
       policyName: row.policy_name,
       subject: { kind: row.subject_kind, id: row.subject_id },
       scope: { kind: row.scope_kind, id: row.scope_id },
+      ...(row.bounds === null || row.bounds === undefined
+        ? {}
+        : { bounds: row.bounds as GrantBounds }),
       createdBy: row.created_by,
       createdAt: iso(row.created_at),
     };

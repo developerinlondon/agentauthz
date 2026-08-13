@@ -1,6 +1,6 @@
 import { afterAll, beforeAll, describe, expect, test } from "bun:test";
 import { Kysely, PostgresDialect, sql } from "kysely";
-import { Migrator } from "kysely/migration";
+import { Migrator, NO_MIGRATIONS } from "kysely/migration";
 import pg from "pg";
 import {
   AuthzMigrationProvider,
@@ -152,6 +152,7 @@ const pgImpl: ConformanceImpl = async (c) => {
       policyId: p.id,
       subject: g.subject,
       scope: g.scope,
+      bounds: g.bounds,
       createdBy: null,
     });
   }
@@ -216,14 +217,17 @@ describe("conformance through the pg store", () => {
 describe("grant and policy CRUD", () => {
   const alice = { kind: "user", id: "crud-alice" };
 
-  test("createGrant is idempotent and normalizes a root-kind scope to the canonical id", async () => {
-    await truncate();
-    const p = await store.createPolicy({
-      name: "crud-read",
+  const readPolicy = (name: string) =>
+    store.createPolicy({
+      name,
       description: null,
       statements: [{ effect: "allow", actions: ["docs.read"], resources: ["*"] }],
       createdBy: null,
     });
+
+  test("createGrant is idempotent and normalizes a root-kind scope to the canonical id", async () => {
+    await truncate();
+    const p = await readPolicy("crud-read");
     await store.createGrant({ policyId: p.id, subject: alice, scope: ROOT, createdBy: null });
     await store.createGrant({ policyId: p.id, subject: alice, scope: ROOT, createdBy: null });
     await store.createGrant({
@@ -236,6 +240,54 @@ describe("grant and policy CRUD", () => {
     expect(rows.length).toBe(1);
     expect(rows[0]!.scope).toEqual(ROOT);
     expect(rows[0]!.policyName).toBe("crud-read");
+  });
+
+  test("re-granting replaces bounds rather than keeping the stale limit", async () => {
+    await truncate();
+    const p = await readPolicy("crud-bounds");
+    const eu = [{ operator: "StringEquals", key: "app:Region", value: "eu-west" }];
+    const us = [{ operator: "StringEquals", key: "app:Region", value: "us-east" }];
+
+    await store.createGrant({
+      policyId: p.id,
+      subject: alice,
+      scope: ROOT,
+      bounds: eu,
+      createdBy: null,
+    });
+    expect((await store.listGrants({ policyId: p.id }))[0]!.bounds).toEqual(eu);
+
+    // Tightening must take effect — silently keeping `eu` would leave an admin
+    // believing they had narrowed access when they had not.
+    await store.createGrant({
+      policyId: p.id,
+      subject: alice,
+      scope: ROOT,
+      bounds: us,
+      createdBy: null,
+    });
+    const after = await store.listGrants({ policyId: p.id });
+    expect(after.length).toBe(1);
+    expect(after[0]!.bounds).toEqual(us);
+
+    await store.createGrant({ policyId: p.id, subject: alice, scope: ROOT, createdBy: null });
+    expect((await store.listGrants({ policyId: p.id }))[0]!.bounds).toBeUndefined();
+  });
+
+  test("bounds survive the round trip into evaluation", async () => {
+    await truncate();
+    const p = await readPolicy("crud-bounds-eval");
+    await store.createGrant({
+      policyId: p.id,
+      subject: alice,
+      scope: ROOT,
+      bounds: [{ operator: "StringEquals", key: "app:Region", value: "eu-west" }],
+      createdBy: null,
+    });
+    const [resolved] = await store.grantsFor([alice], [ROOT]);
+    expect(resolved!.bounds).toEqual([
+      { operator: "StringEquals", key: "app:Region", value: "eu-west" },
+    ]);
   });
 
   test("attach/detach speak the flat shape over grant storage", async () => {
@@ -265,12 +317,7 @@ describe("grant and policy CRUD", () => {
 
   test("deleteGrantsForSubject revokes at EVERY scope", async () => {
     await truncate();
-    const p = await store.createPolicy({
-      name: "crud-revoke",
-      description: null,
-      statements: [{ effect: "allow", actions: ["docs.read"], resources: ["*"] }],
-      createdBy: null,
-    });
+    const p = await readPolicy("crud-revoke");
     await store.createGrant({ policyId: p.id, subject: alice, scope: ROOT, createdBy: null });
     await store.createGrant({
       policyId: p.id,
@@ -284,12 +331,7 @@ describe("grant and policy CRUD", () => {
 
   test("deleteGrant by id; getGrant round-trip", async () => {
     await truncate();
-    const p = await store.createPolicy({
-      name: "crud-byid",
-      description: null,
-      statements: [{ effect: "allow", actions: ["docs.read"], resources: ["*"] }],
-      createdBy: null,
-    });
+    const p = await readPolicy("crud-byid");
     await store.createGrant({
       policyId: p.id,
       subject: alice,
@@ -461,7 +503,9 @@ describe("audit through the pg sink", () => {
 
 describe("migration rollback", () => {
   test("down drops the tables and function; up again is clean", async () => {
-    const down = await migrator.migrateDown();
+    // Every migration, not just the latest — migrateDown() is one step, so
+    // this would silently stop asserting once a second migration existed.
+    const down = await migrator.migrateTo(NO_MIGRATIONS);
     expect(down.error).toBeUndefined();
     const tables = await db.introspection.getTables();
     for (const t of ["authz_policies", "authz_grants", "authz_audit"]) {

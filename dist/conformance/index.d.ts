@@ -1,8 +1,19 @@
+import type { ActionCatalogueEntry } from "../model/action.js";
 import type { ConditionKeys } from "../model/condition.js";
+import type { AuthzDescriptor } from "../model/descriptor.js";
 import type { ResolvedGrant } from "../model/grant.js";
 import type { Scope } from "../model/scope.js";
 import type { Subject } from "../model/subject.js";
 export { memoryGrantSource, MemoryGrantStore } from "./memory.js";
+export interface DescriptorFixture {
+    vocabulary: {
+        actions: ActionCatalogueEntry[];
+        conditionKeys: ConditionKeys;
+        scopeKinds: string[];
+    };
+    expected: AuthzDescriptor;
+}
+export declare function loadDescriptorFixture(): DescriptorFixture;
 export interface ConformanceCase {
     suite: string;
     name: string;

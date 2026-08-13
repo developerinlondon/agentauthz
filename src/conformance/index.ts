@@ -12,13 +12,33 @@ import { makeAuthz } from "../core/authz.js";
 import { builtinContextEntries, makeConditionContext } from "../core/conditions.js";
 import { resolveConditionKeys } from "../core/conditions.js";
 import { evaluate } from "../core/evaluate.js";
+import type { ActionCatalogueEntry } from "../model/action.js";
 import type { ConditionKeys } from "../model/condition.js";
+import type { AuthzDescriptor } from "../model/descriptor.js";
 import type { ResolvedGrant } from "../model/grant.js";
 import type { Scope } from "../model/scope.js";
 import type { Subject } from "../model/subject.js";
 import { memoryGrantSource } from "./memory.js";
 
 export { memoryGrantSource, MemoryGrantStore } from "./memory.js";
+
+export interface DescriptorFixture {
+  vocabulary: {
+    actions: ActionCatalogueEntry[];
+    conditionKeys: ConditionKeys;
+    scopeKinds: string[];
+  };
+  expected: AuthzDescriptor;
+}
+
+// The descriptor contract as data: a known vocabulary and the exact document
+// it must produce, so a change to the shape is a deliberate act rather than a
+// surprise for every UI downstream.
+export function loadDescriptorFixture(): DescriptorFixture {
+  const dir = path.join(path.dirname(fileURLToPath(import.meta.url)), "descriptor");
+  const read = (f: string) => JSON.parse(readFileSync(path.join(dir, f), "utf8"));
+  return { vocabulary: read("vocabulary.json"), expected: read("expected.json") };
+}
 
 export interface ConformanceCase {
   suite: string;
@@ -88,6 +108,7 @@ function normalizeGrants(
     subject: g.subject,
     scope: g.scope,
     statements: g.statements ?? [],
+    ...(g.bounds !== undefined ? { bounds: g.bounds } : {}),
   }));
 }
 

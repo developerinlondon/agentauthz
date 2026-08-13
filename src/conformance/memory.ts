@@ -1,5 +1,5 @@
 import { applicableGrants } from "../core/evaluate.js";
-import type { GrantRecord, ResolvedGrant } from "../model/grant.js";
+import type { GrantBounds, GrantRecord, ResolvedGrant } from "../model/grant.js";
 import type { Scope, ScopeChain } from "../model/scope.js";
 import { scopeEquals } from "../model/scope.js";
 import type { Subject } from "../model/subject.js";
@@ -48,6 +48,7 @@ export class MemoryGrantStore implements GrantStore {
       policyName: grant.policyName,
       subject: grant.subject,
       scope: grant.scope,
+      ...(grant.bounds !== undefined ? { bounds: grant.bounds } : {}),
       createdBy: null,
       createdAt: new Date(0).toISOString(),
       statements: grant.statements,
@@ -61,6 +62,7 @@ export class MemoryGrantStore implements GrantStore {
       subject: g.subject,
       scope: g.scope,
       statements: g.statements,
+      ...(g.bounds !== undefined ? { bounds: g.bounds } : {}),
     }));
   }
 
@@ -69,6 +71,7 @@ export class MemoryGrantStore implements GrantStore {
     policyId: string;
     subject: Subject;
     scope: Scope;
+    bounds?: GrantBounds;
     createdBy: string | null;
   }): Promise<void> {
     const policy = this.policies.get(input.policyId);
@@ -76,13 +79,16 @@ export class MemoryGrantStore implements GrantStore {
     const scope = this.rootScope && input.scope.kind === this.rootScope.kind
       ? this.rootScope
       : input.scope;
-    if (
-      this.grants.some((g) =>
-        g.policyId === input.policyId
-        && subjectEquals(g.subject, input.subject)
-        && scopeEquals(g.scope, scope)
-      )
-    ) {
+    const existing = this.grants.find((g) =>
+      g.policyId === input.policyId
+      && subjectEquals(g.subject, input.subject)
+      && scopeEquals(g.scope, scope)
+    );
+    if (existing) {
+      // Replace, matching the pg backend: re-granting to tighten a limit must
+      // not silently keep the old one.
+      if (input.bounds === undefined) delete existing.bounds;
+      else existing.bounds = input.bounds;
       return;
     }
     this.grants.push({
@@ -91,6 +97,7 @@ export class MemoryGrantStore implements GrantStore {
       policyName: policy.name,
       subject: input.subject,
       scope,
+      ...(input.bounds !== undefined ? { bounds: input.bounds } : {}),
       createdBy: input.createdBy,
       createdAt: new Date().toISOString(),
       statements: policy.statements,

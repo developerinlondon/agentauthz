@@ -13,6 +13,14 @@ import { resolveConditionKeys } from "../core/conditions.js";
 import { evaluate } from "../core/evaluate.js";
 import { memoryGrantSource } from "./memory.js";
 export { memoryGrantSource, MemoryGrantStore } from "./memory.js";
+// The descriptor contract as data: a known vocabulary and the exact document
+// it must produce, so a change to the shape is a deliberate act rather than a
+// surprise for every UI downstream.
+export function loadDescriptorFixture() {
+    const dir = path.join(path.dirname(fileURLToPath(import.meta.url)), "descriptor");
+    const read = (f) => JSON.parse(readFileSync(path.join(dir, f), "utf8"));
+    return { vocabulary: read("vocabulary.json"), expected: read("expected.json") };
+}
 function normalizeGrants(grants, prefix) {
     return (grants ?? []).map((g, i) => ({
         policyId: g.policyId ?? `${prefix}${i + 1}`,

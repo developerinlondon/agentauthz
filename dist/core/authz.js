@@ -7,6 +7,7 @@
 import { isValidScope } from "../model/scope.js";
 import { isValidSubject } from "../model/subject.js";
 import { builtinContextEntries, makeConditionContext, resolveConditionKeys } from "./conditions.js";
+import { describeAuthz } from "./describe.js";
 import { decide } from "./evaluate.js";
 class AuthzEvaluator {
     options;
@@ -99,6 +100,13 @@ class AuthzEvaluator {
             return [];
         const valid = Array.isArray(subjects) ? subjects.filter(isValidSubject) : [];
         return await this.resolveGrants(valid, chain);
+    }
+    describe() {
+        return describeAuthz({
+            actionRegistry: this.options.actionRegistry,
+            conditionKeys: this.options.conditionKeys,
+            scopeKinds: this.options.scopeKinds,
+        });
     }
     knownScope(scope) {
         if (!isValidScope(scope))

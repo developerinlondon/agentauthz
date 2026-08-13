@@ -16,6 +16,7 @@ export {
   resolveConditionKeys,
   validateConditions,
 } from "./conditions.js";
+export { describeAuthz, type DescribeInput } from "./describe.js";
 export { applicableGrants, decide, evaluate, type EvaluateInput } from "./evaluate.js";
 export { type DraftResult, type DraftVocabulary, repairDraft } from "./repair.js";
 export { validateStatements, type Validation, type ValidationVocabulary } from "./validate.js";

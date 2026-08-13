@@ -8,6 +8,7 @@ export interface ActionRegistry {
     isKnownAction(action: string): boolean;
     parentOf?: ActionParentLookup;
     descendantsOf?(action: string): string[];
+    listActions?(): string[];
 }
 export declare function actionRegistryFromList(actions: readonly string[]): ActionRegistry;
 export declare function actionRegistryFromCatalogue(entries: readonly ActionCatalogueEntry[]): ActionRegistry;

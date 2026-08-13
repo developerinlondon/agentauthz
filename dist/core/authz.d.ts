@@ -1,4 +1,5 @@
 import type { ConditionKeys } from "../model/condition.js";
+import type { AuthzDescriptor } from "../model/descriptor.js";
 import type { ResolvedGrant } from "../model/grant.js";
 import { type ScopeChain } from "../model/scope.js";
 import type { Subject } from "../model/subject.js";
@@ -22,6 +23,7 @@ export interface Authz {
     check(subjects: readonly Subject[], action: string, resource: string, opts?: CheckOpts): Promise<boolean>;
     checkDetailed(subjects: readonly Subject[], action: string, resource: string, opts?: CheckOpts): Promise<CheckDetail>;
     listGrantsFor(subjects: readonly Subject[], scopeChain?: ScopeChain): Promise<ResolvedGrant[]>;
+    describe(): AuthzDescriptor;
 }
 export interface AuthzOptions {
     grantStore: GrantStore;

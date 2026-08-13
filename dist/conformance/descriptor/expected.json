@@ -1,0 +1,60 @@
+{
+  "version": 1,
+  "actions": [
+    { "action": "widgets.read" },
+    { "action": "widgets.list", "derivesFrom": "widgets.read" },
+    { "action": "widgets.write", "derivesFrom": "widgets.read" },
+    { "action": "widgets.publish", "derivesFrom": "widgets.write" },
+    { "action": "audit.read" }
+  ],
+  "actionClosures": {
+    "widgets.read": ["widgets.list", "widgets.publish", "widgets.write"],
+    "widgets.list": [],
+    "widgets.write": ["widgets.publish"],
+    "widgets.publish": [],
+    "audit.read": []
+  },
+  "conditionKeys": {
+    "app:Region": {
+      "type": "string",
+      "lowercase": true,
+      "operators": [
+        "StringEquals",
+        "StringNotEquals",
+        "StringLike",
+        "StringIn",
+        "StringNotIn",
+        "StringLikeIn"
+      ]
+    },
+    "app:MaxCpu": {
+      "type": "number",
+      "operators": ["NumericLessThan", "NumericGreaterThan"]
+    },
+    "app:Cidr": {
+      "type": "ip",
+      "operators": ["IpAddress", "NotIpAddress"]
+    },
+    "app:NotBefore": {
+      "type": "date",
+      "operators": ["DateLessThan", "DateGreaterThan"]
+    },
+    "request:Time": {
+      "type": "date",
+      "builtIn": true,
+      "operators": ["DateLessThan", "DateGreaterThan"]
+    },
+    "request:HourUTC": {
+      "type": "number",
+      "builtIn": true,
+      "operators": ["NumericLessThan", "NumericGreaterThan"]
+    },
+    "request:SourceIp": {
+      "type": "ip",
+      "builtIn": true,
+      "operators": ["IpAddress", "NotIpAddress"]
+    }
+  },
+  "scopeKinds": ["root", "project"],
+  "setOperators": ["StringIn", "StringNotIn", "StringLikeIn"]
+}
