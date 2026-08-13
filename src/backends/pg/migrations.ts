@@ -140,10 +140,13 @@ function baseSchema(config: PgAuthzConfig): Migration {
 // Bounds narrow a grant, so they live beside it rather than in the policy.
 function grantBounds(): Migration {
   return {
+    // Idempotent throughout: a host folding this into its own chain runs it
+    // from a squashed baseline on fresh databases AND as a delta on live ones,
+    // and those two paths must converge rather than collide.
     async up(db: Kysely<unknown>): Promise<void> {
-      await db.schema.alterTable("authz_grants").addColumn("bounds", "jsonb").execute();
+      await sql`alter table authz_grants add column if not exists bounds jsonb`.execute(db);
       await sql`
-        create function authz_bounds_ok(bounds jsonb) returns boolean
+        create or replace function authz_bounds_ok(bounds jsonb) returns boolean
         language sql immutable as $$
           select bounds is null or (
             jsonb_typeof(bounds) = 'array'
@@ -155,9 +158,12 @@ function grantBounds(): Migration {
         $$
       `.execute(db);
       await sql`
-        alter table authz_grants
-        add constraint authz_grants_bounds_shape_check
-        check (authz_bounds_ok(bounds))
+        do $$
+        begin
+          alter table authz_grants
+            add constraint authz_grants_bounds_shape_check check (authz_bounds_ok(bounds));
+        exception when duplicate_object then null;
+        end $$
       `.execute(db);
     },
     async down(db: Kysely<unknown>): Promise<void> {
@@ -185,6 +191,15 @@ export async function applyAuthzMigrations(
 ): Promise<void> {
   const all = authzMigrations(config);
   for (const key of Object.keys(all).sort()) await all[key]!.up(db);
+}
+
+// The mirror image, newest first, so a host's rollback leaves nothing behind.
+export async function revertAuthzMigrations(
+  db: Kysely<unknown>,
+  config: PgAuthzConfig,
+): Promise<void> {
+  const all = authzMigrations(config);
+  for (const key of Object.keys(all).sort().reverse()) await all[key]!.down?.(db);
 }
 
 // For hosts that run these standalone rather than folding them into a chain.

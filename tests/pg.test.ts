@@ -5,6 +5,7 @@ import pg from "pg";
 import type { AdminStore } from "../src/admin/index.js";
 import {
   AuthzMigrationProvider,
+  authzMigrations,
   PgAuthzStore,
   SystemPolicyError,
 } from "../src/backends/pg/index.js";
@@ -508,6 +509,47 @@ describe("audit through the pg sink", () => {
 // ---------------------------------------------------------------------------
 // Down migration (keep LAST — it drops the schema)
 // ---------------------------------------------------------------------------
+
+describe("migrations converge from both paths", () => {
+  // A host folds these into a squashed baseline for fresh databases and runs
+  // the same migration as a delta on live ones. Re-running must be a no-op,
+  // not a duplicate-column error on every fresh deploy.
+  test("re-running the bounds migration is a no-op", async () => {
+    const bounds = authzMigrations(CONFIG)["0002_grant_bounds"]!;
+    await bounds.up(db as never);
+    await bounds.up(db as never);
+
+    await truncate();
+    const p = await store.createPolicy({
+      name: "converge",
+      description: null,
+      statements: [{ effect: "allow", actions: ["docs.read"], resources: ["*"] }],
+      createdBy: null,
+    });
+    await store.createGrant({
+      policyId: p.id,
+      subject: { kind: "user", id: "converge" },
+      scope: ROOT,
+      bounds: [{ operator: "StringEquals", key: "app:Region", value: "eu-west" }],
+      createdBy: null,
+    });
+    expect((await store.listGrants({ policyId: p.id }))[0]!.bounds).toHaveLength(1);
+  });
+
+  test("the bounds shape constraint still refuses a non-object member", async () => {
+    await truncate();
+    const insert = db.insertInto("authz_grants").values({
+      id: crypto.randomUUID(),
+      policy_id: crypto.randomUUID(),
+      subject_kind: "user",
+      subject_id: "shape",
+      scope_kind: "root",
+      scope_id: "*",
+      bounds: JSON.stringify(["not-an-object"]),
+    }).execute();
+    expect(insert).rejects.toThrow(/authz_grants_bounds_shape_check/);
+  });
+});
 
 describe("migration rollback", () => {
   test("down drops the tables and function; up again is clean", async () => {

@@ -20,6 +20,8 @@ src/
 ├── model/        statement, grant, condition, subject {kind,id}, scope shapes — THE SPEC
 ├── core/         pure evaluator (zero deps, no I/O) + validate/repair + SoD approvals
 ├── conformance/  golden JSON fixtures: every semantic as data-driven cases + runner
+├── admin/        (Request) => Response routes over the descriptor
+├── ui/           one generic React component + headless hook (react optional)
 ├── ports/        GrantStore · AuditSink · ScopeRoleSynthesizer · ActionRegistry ·
 │                 ConditionKeys · SubjectDirectory
 └── backends/pg/  reference Kysely adapter + migrations (authz_policies · authz_grants · authz_audit)
@@ -192,6 +194,79 @@ Built-in condition keys (`request:Time`, `request:HourUTC`, `request:SourceIp`) 
 engine; everything else is host-declared and host-populated — a key with no honest value stays
 unpopulated (fails closed).
 
+## Administration
+
+Every admin screen — grants, policy browser, audit, bounds form — is a pure function of what the
+host already declared, so the library serves that vocabulary as data and ships one UI over it
+instead of leaving each host to rebuild the same screens.
+
+`describe()` projects the declared vocabulary into a stable, versioned JSON document: the actions
+with their derivation closures precomputed, each condition key with the operators its type admits,
+the scope kinds, and which operators take `values` rather than `value`.
+
+```ts
+const descriptor = authz.describe(); // or describeAuthz({ actionRegistry, conditionKeys, scopeKinds })
+```
+
+`@neutroncore/authz/admin` turns that into routes — plain `(Request) => Promise<Response>`, so the
+same handlers run under Bun, Node, Deno and Workers with no framework adapter:
+
+```ts
+import { createAdminHandler } from "@neutroncore/authz/admin";
+
+const handler = createAdminHandler({
+  descriptor: authz.describe(),
+  store, // PgAuthzStore satisfies AdminStore as-is
+  basePath: "/api/v1/authz",
+  actor: (req) => resolveAdmin(req), // recorded as creator and audit subject
+  auditSink: store,
+  subjects: { list: (q) => findSubjects(q) },
+});
+```
+
+| Route                                                 |                                                        |
+| ----------------------------------------------------- | ------------------------------------------------------ |
+| `GET /descriptor`                                     | the document a UI binds to                             |
+| `GET /grants` · `POST /grants` · `DELETE /grants/:id` | filterable by subject and scope; writes validate first |
+| `GET /policies` · `GET /subjects` · `GET /audit`      | read-only                                              |
+
+**These handlers never decide who may administer.** That is yours, and mounting them unauthenticated
+exposes grant creation to anyone who can reach the path.
+
+`@neutroncore/authz/ui` is one generic React component over those routes. It imports no host
+vocabulary — everything project-specific arrives at runtime in the descriptor, so a host that
+declares a new condition key gets a new form field with no frontend change:
+
+```tsx
+import { AuthzAdmin } from "@neutroncore/authz/ui";
+
+<AuthzAdmin baseUrl="/api/v1/authz" fetch={authedFetch} />;
+```
+
+`react` is an **optional** peer and nothing outside `src/ui` imports it, so a service that only uses
+the engine never pulls it in. Theming is CSS custom properties only (`--authz-fg`, `--authz-accent`,
+`--authz-font` defaulting to `inherit`, …) — no hard-coded palette. For a host with its own design
+system, `useAuthzAdmin()` exposes the same logic headless, with no markup.
+
+### Grant bounds
+
+A grant may carry `bounds` — conditions attached to the grant rather than the policy — so one
+curated policy is grantable with different limits per subject instead of spawning a policy per
+variation.
+
+```ts
+await store.createGrant({
+  policyId: contentAuthor.id,
+  subject: { kind: "user", id: "alice" },
+  scope: { kind: "project", id: "acme" },
+  bounds: [{ operator: "StringEquals", key: "app:Region", value: "eu-west" }],
+});
+```
+
+Bounds narrow **allow** statements only. Applied to a `deny` they would make it fire less often,
+which widens access — the one direction this engine never fails in. Re-granting replaces bounds
+rather than keeping the previous ones, so tightening a limit actually takes effect.
+
 ## Storage
 
 `backends/pg` is a reference implementation on Kysely + Postgres, and it is the only one shipped.
@@ -206,6 +281,24 @@ malformed-input, and role synthesis. Any alternative backend must decide every c
 see `tests/pg.test.ts` for the storage-backed runner template. Cases marked `"storable": false`
 carry condition shapes the pg CHECK constraint refuses at rest; a shape-checking backend asserts the
 rejection instead.
+
+`src/conformance/descriptor/` is the same idea for the administration contract: a known vocabulary
+and the exact document it must produce, so a change to the descriptor shape is a deliberate act
+rather than a surprise for every UI downstream.
+
+### Folding the migrations into your own chain
+
+Run **every** migration, never a named one — a host that hardcodes
+`authzMigrations(cfg)["0001_authz"]` silently skips everything added later:
+
+```ts
+import { applyAuthzMigrations, revertAuthzMigrations } from "@neutroncore/authz/backends/pg";
+
+await applyAuthzMigrations(db, AUTHZ_CONFIG);
+```
+
+Each migration is idempotent, so a squashed baseline on a fresh database and a delta on a live one
+converge instead of colliding.
 
 ## Development
 
@@ -225,7 +318,7 @@ The registry is the normal path. Installing straight from the repository also wo
 committed, so it resolves without a build step:
 
 ```sh
-bun add github:developerinlondon/neutron-authz#v0.3.2
+bun add github:developerinlondon/neutron-authz#v0.4.0
 ```
 
 Regenerate it with `bun run build` after any change to `src/`.
@@ -235,7 +328,7 @@ Regenerate it with `bun run build` after any change to `src/`.
 Bump `version` in `package.json`, merge, then push a matching tag:
 
 ```sh
-git tag v0.3.2 && git push origin v0.3.2
+git tag v0.4.0 && git push origin v0.4.0
 ```
 
 The release workflow builds, typechecks and runs the whole suite — including the storage-backed

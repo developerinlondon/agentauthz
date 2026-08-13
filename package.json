@@ -67,6 +67,7 @@
   },
   "scripts": {
     "build": "rm -rf dist && tsc -p tsconfig.build.json && cp -R src/conformance/cases dist/conformance/cases && cp -R src/conformance/descriptor dist/conformance/descriptor",
+    "prepack": "bun run build",
     "prepublishOnly": "bun run build",
     "test": "bun test",
     "typecheck": "tsc --noEmit"
