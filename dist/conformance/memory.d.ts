@@ -1,4 +1,4 @@
-import type { ResolvedGrant } from "../model/grant.js";
+import type { GrantBounds, ResolvedGrant } from "../model/grant.js";
 import type { Scope, ScopeChain } from "../model/scope.js";
 import type { Subject } from "../model/subject.js";
 import type { GrantSource, GrantStore } from "../ports/index.js";
@@ -21,6 +21,7 @@ export declare class MemoryGrantStore implements GrantStore {
         policyId: string;
         subject: Subject;
         scope: Scope;
+        bounds?: GrantBounds;
         createdBy: string | null;
     }): Promise<void>;
     deleteGrant(id: string): Promise<boolean>;

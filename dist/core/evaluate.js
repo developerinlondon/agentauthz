@@ -32,7 +32,12 @@ function has(grants, effect, action, resource, ctx, keys, parentOf) {
                 continue;
             if (!s.resources.some((r) => resourceMatches(r, resource)))
                 continue;
-            const verdict = evalConditions(s.conditions, ctx, keys);
+            // ALLOW only: bounds on a deny would let an out-of-bounds request
+            // escape it — the one direction this engine never fails in.
+            const conditions = effect === "allow" && g.bounds && g.bounds.length > 0
+                ? [...(s.conditions ?? []), ...g.bounds]
+                : s.conditions;
+            const verdict = evalConditions(conditions, ctx, keys);
             if (effect === "allow" ? verdict === "match" : verdict !== "no-match")
                 return true;
         }

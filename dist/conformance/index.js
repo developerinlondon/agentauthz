@@ -28,6 +28,7 @@ function normalizeGrants(grants, prefix) {
         subject: g.subject,
         scope: g.scope,
         statements: g.statements ?? [],
+        ...(g.bounds !== undefined ? { bounds: g.bounds } : {}),
     }));
 }
 // Every case from every suite file under ./cases, suite defaults folded in.

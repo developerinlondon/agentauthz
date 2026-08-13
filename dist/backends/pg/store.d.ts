@@ -1,5 +1,5 @@
 import { type Kysely } from "kysely";
-import type { GrantRecord, PolicyRecord, ResolvedGrant } from "../../model/grant.js";
+import type { GrantBounds, GrantRecord, PolicyRecord, ResolvedGrant } from "../../model/grant.js";
 import type { Scope, ScopeChain } from "../../model/scope.js";
 import type { PolicyStatement } from "../../model/statement.js";
 import type { Subject } from "../../model/subject.js";
@@ -31,6 +31,7 @@ export declare class PgAuthzStore implements GrantStore {
         policyId: string;
         subject: Subject;
         scope: Scope;
+        bounds?: GrantBounds;
         createdBy: string | null;
     }): Promise<void>;
     getGrant(id: string): Promise<GrantRecord | null>;
@@ -38,6 +39,8 @@ export declare class PgAuthzStore implements GrantStore {
         scopeKind?: string;
         scopeId?: string;
         policyId?: string;
+        subjectKind?: string;
+        subjectId?: string;
     }): Promise<GrantRecord[]>;
     deleteGrant(id: string): Promise<boolean>;
     deleteGrantAt(policyId: string, subject: Subject, scope: Scope): Promise<boolean>;

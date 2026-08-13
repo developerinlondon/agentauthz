@@ -1,3 +1,4 @@
+import type { PolicyCondition } from "./condition.js";
 import type { Scope } from "./scope.js";
 import type { PolicyStatement } from "./statement.js";
 import type { Subject } from "./subject.js";
@@ -9,12 +10,14 @@ export interface PolicyRecord {
     system: boolean;
     updatedAt: string;
 }
+export type GrantBounds = PolicyCondition[];
 export interface GrantRecord {
     id: string;
     policyId: string;
     policyName: string;
     subject: Subject;
     scope: Scope;
+    bounds?: GrantBounds;
     createdBy: string | null;
     createdAt: string;
 }
@@ -24,5 +27,6 @@ export interface ResolvedGrant {
     subject: Subject;
     scope: Scope;
     statements: PolicyStatement[];
+    bounds?: GrantBounds;
 }
 //# sourceMappingURL=grant.d.ts.map

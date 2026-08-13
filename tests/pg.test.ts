@@ -2,6 +2,7 @@ import { afterAll, beforeAll, describe, expect, test } from "bun:test";
 import { Kysely, PostgresDialect, sql } from "kysely";
 import { Migrator, NO_MIGRATIONS } from "kysely/migration";
 import pg from "pg";
+import type { AdminStore } from "../src/admin/index.js";
 import {
   AuthzMigrationProvider,
   PgAuthzStore,
@@ -67,6 +68,13 @@ beforeAll(async () => {
 afterAll(async () => {
   await db?.destroy();
   await adminQuery(`drop database if exists ${SCRATCH_DB}`);
+});
+
+// The reference backend must satisfy the admin surface's port without an
+// adapter; this fails the typecheck if the two ever drift.
+test("PgAuthzStore satisfies AdminStore", () => {
+  const asAdminStore: AdminStore = store;
+  expect(asAdminStore).toBe(store);
 });
 
 async function truncate(): Promise<void> {

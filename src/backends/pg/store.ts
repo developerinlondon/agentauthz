@@ -208,11 +208,15 @@ export class PgAuthzStore implements GrantStore {
     scopeKind?: string;
     scopeId?: string;
     policyId?: string;
+    subjectKind?: string;
+    subjectId?: string;
   } = {}): Promise<GrantRecord[]> {
     let q = this.grantQuery();
     if (filter.scopeKind) q = q.where("authz_grants.scope_kind", "=", filter.scopeKind);
     if (filter.scopeId !== undefined) q = q.where("authz_grants.scope_id", "=", filter.scopeId);
     if (filter.policyId) q = q.where("authz_grants.policy_id", "=", filter.policyId);
+    if (filter.subjectKind) q = q.where("authz_grants.subject_kind", "=", filter.subjectKind);
+    if (filter.subjectId) q = q.where("authz_grants.subject_id", "=", filter.subjectId);
     const rows = await q
       .orderBy("authz_grants.scope_kind", "asc").orderBy("authz_grants.scope_id", "asc")
       .orderBy("authz_grants.subject_kind", "asc").orderBy("authz_grants.subject_id", "asc")
