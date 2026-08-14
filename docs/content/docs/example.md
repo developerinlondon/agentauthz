@@ -13,6 +13,8 @@ bun install
 bun run server.ts     # → http://localhost:8787
 ```
 
+![the example admin UI, generated from the descriptor](/images/example-ui.png)
+
 ```mermaid
 flowchart LR
     B[browser: ui.html] -->|GET /descriptor| S[server.ts]

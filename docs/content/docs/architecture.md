@@ -14,9 +14,30 @@ up building all four anyway.
 This library ships both halves, in-process, against your own Postgres. No sidecar, no network hop,
 no cache-invalidation webhook, no fail-open-when-the-PDP-is-down question.
 
-**Use [Cedar](https://www.cedarpolicy.com/) instead** if your policies live in git and you want a
-formally verified evaluator. **Use OpenFGA or SpiceDB instead** if your model is relationship-based
-(ReBAC) and you can run another stateful service.
+## How it compares
+
+|  | @neutroncore/authz | Cedar | OpenFGA / SpiceDB | Casbin |
+| --- | --- | --- | --- | --- |
+| Runs as | in-process library | in-process (WASM from JS) | **separate stateful service** | in-process library |
+| Policy shape | typed statements + typed ABAC conditions | Cedar policy language | relationship tuples (+ CEL caveats) | matcher expression strings |
+| Runtime authoring by admins/agents | first-class: schema-validated rows, named errors | possible; storage is yours | tuples via API | reload from adapters |
+| Storage | **shipped**: Postgres + migrations + at-rest checks; swappable behind a port | bring your own | the service's own | thin adapters |
+| A deny whose condition can't evaluate | **deny stands** (fail closed) | erroring policy is skipped | n/a (graph model) | depends on the matcher |
+| Per-decision audit | built in | bring your own | varies | bring your own |
+| Admin surface | descriptor + handlers served | bring your own | service APIs | bring your own |
+| Reverse queries at scale | no — checks only | no | **yes — their home turf** | limited |
+| Formally verified evaluator | no | **yes** | no | no |
+
+The two load-bearing rows: when policies are **data written by admins and agents**, an
+evaluator-only library leaves you building storage, migrations, validation, audit and the admin
+surface yourself — and when a deny's condition cannot be evaluated, this engine keeps the deny
+standing, where an engine that skips an erroring policy fails **open** exactly where the author
+asked it to fail closed.
+
+Reach for the others where their strengths are real: **Cedar** for the formally verified
+evaluator and analysis tooling, building the ring around it yourself; **OpenFGA/SpiceDB** when
+your questions are graph-shaped over millions of relationships — reverse indexing at scale is
+genuinely their product, and this library does not do it.
 
 ## The layers
 
