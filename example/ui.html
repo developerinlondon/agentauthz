@@ -1,0 +1,232 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1" />
+<title>authz admin — example</title>
+<style>
+  :root {
+    --fg: #1c1e21; --muted: #6b7280; --bg: #fff; --subtle: #f6f7f9;
+    --border: #d9dce1; --accent: #2f6feb; --danger: #b42318; --r: 6px;
+  }
+  * { box-sizing: border-box; }
+  body { margin: 0 auto; max-width: 960px; padding: 24px; color: var(--fg);
+         background: var(--bg); font: 15px/1.5 system-ui, sans-serif; }
+  h1 { font-size: 20px; } h2 { font-size: 16px; margin-top: 28px; }
+  table { width: 100%; border-collapse: collapse; font-size: 14px; }
+  th, td { text-align: left; padding: 7px 9px; border-bottom: 1px solid var(--border); vertical-align: top; }
+  th { color: var(--muted); font-weight: 500; }
+  .chip { display: inline-block; padding: 1px 8px; margin: 0 4px 4px 0; font-size: 12px;
+          background: var(--subtle); border: 1px solid var(--border); border-radius: var(--r); }
+  .muted { color: var(--muted); font-size: 13px; }
+  .row { display: flex; gap: 8px; flex-wrap: wrap; align-items: flex-end; margin: 8px 0; }
+  label { display: block; font-size: 12px; color: var(--muted); margin-bottom: 2px; }
+  input, select { font: inherit; padding: 5px 8px; border: 1px solid var(--border);
+                  border-radius: var(--r); background: var(--bg); color: var(--fg); }
+  button { font: inherit; padding: 6px 14px; cursor: pointer; border-radius: var(--r);
+           border: 1px solid var(--accent); background: var(--accent); color: #fff; }
+  button.ghost { background: none; color: var(--fg); border-color: var(--border); }
+  button.danger { background: none; color: var(--danger); border-color: var(--border); }
+  #error { color: var(--danger); border: 1px solid var(--danger); border-radius: var(--r);
+           padding: 8px 12px; margin: 12px 0; display: none; }
+  #coverage { border: 1px solid var(--border); border-radius: var(--r); padding: 10px 12px;
+              background: var(--subtle); margin: 12px 0; }
+</style>
+</head>
+<body>
+<h1>authz admin <span class="muted">— generated from <code>/api/authz/descriptor</code></span></h1>
+<div id="error" role="alert"></div>
+
+<h2>Grants</h2>
+<table><thead><tr><th>Subject</th><th>Policy</th><th>Scope</th><th>Bounds</th><th></th></tr></thead>
+<tbody id="grants"></tbody></table>
+
+<h2>New grant</h2>
+<div class="row">
+  <span><label for="policy">Policy</label><select id="policy"></select></span>
+  <span><label for="skind">Subject kind</label><input id="skind" value="user" size="7" /></span>
+  <span><label for="sid">Subject</label><input id="sid" list="subjects" size="14" /></span>
+  <datalist id="subjects"></datalist>
+  <span><label for="sckind">Scope kind</label><select id="sckind"></select></span>
+  <span><label for="scid">Scope id</label><input id="scid" value="*" size="8" /></span>
+</div>
+<div id="bounds"></div>
+<button class="ghost" id="addBound">Add bound</button>
+<div id="coverage"></div>
+<button id="grant">Grant</button>
+
+<h2>Try a check</h2>
+<div class="row">
+  <span><label for="cid">Subject</label><input id="cid" value="alice" size="10" /></span>
+  <span><label for="caction">Action</label><select id="caction"></select></span>
+  <span><label for="cres">Resource</label><input id="cres" value="article:1" size="12" /></span>
+  <span><label for="cctx">app:Region</label><input id="cctx" placeholder="eu-west" size="9" /></span>
+  <button class="ghost" id="check">Check</button>
+  <strong id="verdict"></strong>
+</div>
+
+<h2>Audit</h2>
+<table><thead><tr><th>When</th><th>Subject</th><th>Decision</th><th>Action</th><th>Resource</th><th>Source</th></tr></thead>
+<tbody id="audit"></tbody></table>
+
+<script type="module">
+const base = "/api/authz";
+const headers = { "content-type": "application/json", "x-demo-admin": "demo-admin" };
+const $ = (id) => document.getElementById(id);
+const esc = (s) => String(s).replace(/[&<>"]/g, (c) => ({ "&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;" }[c]));
+
+async function api(path, init) {
+  const res = await fetch(base + path, { headers, ...init });
+  if (!res.ok) throw new Error((await res.json().catch(() => ({}))).error ?? `HTTP ${res.status}`);
+  return res.json();
+}
+const showError = (m) => { $("error").textContent = m; $("error").style.display = m ? "block" : "none"; };
+
+// -- version gate: refuse a descriptor this page does not understand ---------
+const descriptor = await api("/descriptor");
+if (descriptor.version !== 1) {
+  showError(`this UI understands descriptor v1; the server serves v${descriptor.version}`);
+  throw new Error("descriptor version");
+}
+
+// -- everything below renders FROM the descriptor — no host names anywhere ---
+const authorableKeys = Object.entries(descriptor.conditionKeys).filter(([, s]) => !s.builtIn);
+const policies = await api("/policies");
+
+$("policy").innerHTML = policies.map((p) => `<option value="${p.id}">${esc(p.name)}</option>`).join("");
+$("sckind").innerHTML = descriptor.scopeKinds.map((k) => `<option>${esc(k)}</option>`).join("");
+$("caction").innerHTML = descriptor.actions
+  .map((a) => `<option value="${esc(a.action)}">${esc(a.action)}${a.title ? " — " + esc(a.title) : ""}</option>`).join("");
+api("/subjects").then((list) => {
+  $("subjects").innerHTML = list.map((s) => `<option value="${esc(s.id)}">${esc(s.label ?? s.id)}</option>`).join("");
+}).catch(() => {});
+
+// -- bounds form: one field per declared key, control follows type/operator --
+const bounds = [];
+function controlFor(spec, operator) {
+  if (descriptor.setOperators.includes(operator)) return "multi";
+  return { string: "text", number: "number", date: "datetime-local", ip: "text" }[spec.type] ?? "text";
+}
+function renderBounds() {
+  $("bounds").innerHTML = bounds.map((b, i) => {
+    const spec = descriptor.conditionKeys[b.key];
+    const kind = controlFor(spec, b.operator);
+    const input = kind === "multi"
+      ? `<input data-i="${i}" data-f="values" placeholder="comma separated" value="${esc(b.values.join(","))}" />`
+      : `<input data-i="${i}" data-f="value" type="${kind}" placeholder="${spec.type === "ip" ? "10.0.0.0/8" : ""}" value="${esc(b.value)}" />`;
+    return `<div class="row">
+      <span><label>Key</label><select data-i="${i}" data-f="key">${
+        authorableKeys.map(([k]) => `<option ${k === b.key ? "selected" : ""}>${esc(k)}</option>`).join("")
+      }</select></span>
+      <span><label>Operator</label><select data-i="${i}" data-f="operator">${
+        spec.operators.map((o) => `<option ${o === b.operator ? "selected" : ""}>${esc(o)}</option>`).join("")
+      }</select></span>
+      <span><label>${kind === "multi" ? "Values" : "Value"}</label>${input}</span>
+      <button class="ghost" data-i="${i}" data-f="rm">Remove</button>
+    </div>`;
+  }).join("");
+}
+$("bounds").addEventListener("input", (e) => {
+  const { i, f } = e.target.dataset;
+  if (i === undefined) return;
+  const b = bounds[+i];
+  if (f === "key") { b.key = e.target.value; b.operator = descriptor.conditionKeys[b.key].operators[0]; }
+  else if (f === "operator") b.operator = e.target.value;
+  else if (f === "values") b.values = e.target.value.split(",").map((v) => v.trim());
+  else if (f === "value") { b.value = e.target.value; return; }
+  renderBounds();
+});
+$("bounds").addEventListener("click", (e) => {
+  if (e.target.dataset.f === "rm") { bounds.splice(+e.target.dataset.i, 1); renderBounds(); }
+});
+$("addBound").onclick = () => {
+  const [key, spec] = authorableKeys[0] ?? [];
+  if (!key) return showError("this host declares no condition keys");
+  bounds.push({ key, operator: spec.operators[0], value: "", values: [] });
+  renderBounds();
+};
+
+// -- coverage panel: what the selected policy REALLY confers, from closures --
+function coverage(policy) {
+  const granted = new Set(), excluded = new Set();
+  for (const s of policy.statements) {
+    const into = s.effect === "allow" ? granted : excluded;
+    for (const a of s.actions) { into.add(a); for (const d of descriptor.actionClosures[a] ?? []) into.add(d); }
+  }
+  for (const a of excluded) granted.delete(a);
+  return { granted: [...granted].sort(), excluded: [...excluded].sort() };
+}
+function renderCoverage() {
+  const p = policies.find((x) => x.id === $("policy").value);
+  if (!p) return;
+  const { granted, excluded } = coverage(p);
+  $("coverage").innerHTML = `<span class="muted">this grant confers</span><br/>`
+    + (granted.map((a) => `<span class="chip">${esc(a)}</span>`).join("") || `<span class="muted">nothing</span>`)
+    + (excluded.length
+      ? `<br/><span class="muted">and explicitly excludes</span><br/>`
+        + excluded.map((a) => `<span class="chip">${esc(a)}</span>`).join("")
+      : "");
+}
+$("policy").onchange = renderCoverage;
+
+// -- grants table + audit ----------------------------------------------------
+async function refresh() {
+  const grants = await api("/grants");
+  $("grants").innerHTML = grants.map((g) => `<tr>
+    <td>${esc(g.subject.kind)}:${esc(g.subject.id)}</td><td>${esc(g.policyName)}</td>
+    <td>${esc(g.scope.kind)}:${esc(g.scope.id)}</td>
+    <td>${(g.bounds ?? []).map((b) => `<span class="chip">${esc(b.key)} ${esc(b.operator)} ${esc(b.values ? b.values.join(", ") : b.value)}</span>`).join("") || '<span class="muted">unbounded</span>'}</td>
+    <td><button class="danger" data-id="${esc(g.id)}">Revoke</button></td>
+  </tr>`).join("") || `<tr><td colspan="5" class="muted">no grants yet</td></tr>`;
+  const audit = await api("/audit?limit=15");
+  $("audit").innerHTML = audit.map((r) => `<tr>
+    <td class="muted">${esc(r.at.slice(11, 19))}</td><td>${esc(r.subject.kind)}:${esc(r.subject.id)}</td>
+    <td>${esc(r.decision)}</td><td>${esc(r.action)}</td><td>${esc(r.resource)}</td><td class="muted">${esc(r.source)}</td>
+  </tr>`).join("") || `<tr><td colspan="6" class="muted">no audit rows yet</td></tr>`;
+}
+$("grants").addEventListener("click", async (e) => {
+  if (!e.target.dataset.id) return;
+  showError("");
+  try { await api(`/grants/${e.target.dataset.id}`, { method: "DELETE" }); await refresh(); }
+  catch (err) { showError(err.message); }
+});
+
+// -- create: scalar operator emits value, set operator emits values ----------
+$("grant").onclick = async () => {
+  showError("");
+  try {
+    await api("/grants", {
+      method: "POST",
+      body: JSON.stringify({
+        policyId: $("policy").value,
+        subject: { kind: $("skind").value, id: $("sid").value },
+        scope: { kind: $("sckind").value, id: $("scid").value },
+        bounds: bounds.map((b) =>
+          descriptor.setOperators.includes(b.operator)
+            ? { operator: b.operator, key: b.key, values: b.values.filter(Boolean) }
+            : { operator: b.operator, key: b.key, value: b.value }
+        ),
+      }),
+    });
+    bounds.length = 0; renderBounds(); await refresh();
+  } catch (err) { showError(err.message); } // the engine's message, verbatim
+};
+
+$("check").onclick = async () => {
+  const ctx = $("cctx").value ? { "app:Region": $("cctx").value } : {};
+  const res = await fetch("/api/check", {
+    method: "POST", headers,
+    body: JSON.stringify({
+      subject: { kind: "user", id: $("cid").value },
+      action: $("caction").value, resource: $("cres").value, context: ctx,
+    }),
+  });
+  $("verdict").textContent = (await res.json()).allowed ? "✓ allowed" : "✗ denied";
+  await refresh();
+};
+
+renderCoverage();
+await refresh();
+</script>
+</body>
+</html>

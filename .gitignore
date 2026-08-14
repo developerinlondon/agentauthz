@@ -1,4 +1,7 @@
-.omc/
-node_modules/
+docs/.hugo_build.lock
+docs/public/
+docs/resources/
 .env*
+node_modules/
+.omc/
 *.tgz
