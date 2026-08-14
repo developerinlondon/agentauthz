@@ -25,24 +25,17 @@ function sourceFiles(dir: string): string[] {
 }
 
 const src = path.join(root, "src");
-const engineFiles = sourceFiles(src).filter((f) => !f.startsWith(path.join(src, "ui")));
+const engineFiles = sourceFiles(src);
 
-describe("the engine cannot reach the UI", () => {
-  test("nothing outside src/ui imports react", () => {
-    const offenders = engineFiles.filter((f) => /from ["']react/.test(readFileSync(f, "utf8")));
-    expect(offenders.map((f) => path.relative(root, f))).toEqual([]);
+describe("the engine is presentation-free", () => {
+  test("nothing imports react", () => {
+    const offenders = engineFiles.filter((f) => /from ["']react["']/.test(readFileSync(f, "utf8")));
+    expect(offenders).toEqual([]);
   });
 
-  test("nothing outside src/ui imports from src/ui", () => {
-    const offenders = engineFiles.filter((f) =>
-      /from ["'][^"']*\/ui\//.test(readFileSync(f, "utf8"))
-    );
-    expect(offenders.map((f) => path.relative(root, f))).toEqual([]);
-  });
-
-  test("react is an OPTIONAL peer, so an engine-only consumer never installs it", () => {
-    expect(pkg.peerDependencies?.react).toBeTruthy();
-    expect(pkg.peerDependenciesMeta?.react?.optional).toBe(true);
+  test("and react is not a peer at all — presentation belongs to the host", () => {
+    expect(pkg.peerDependencies?.react).toBeUndefined();
+    expect(pkg.peerDependenciesMeta?.react).toBeUndefined();
   });
 });
 
@@ -53,15 +46,3 @@ test("the package has zero runtime dependencies", () => {
   expect(pkg.dependencies ?? {}).toEqual({});
 });
 
-test("src/ui depends on the engine only through types and the version constant", () => {
-  const values = sourceFiles(path.join(src, "ui"))
-    .flatMap((f) =>
-      readFileSync(f, "utf8")
-        .split("\n")
-        .filter((l) => /^import [^t]/.test(l) && /from ["']\.\.\//.test(l))
-    );
-  // A short list is what keeps a later split cheap; anything else here means
-  // the UI has grown into the engine and the two are no longer separable.
-  expect(values.join("\n")).toContain("DESCRIPTOR_VERSION");
-  expect(values).toHaveLength(1);
-});
