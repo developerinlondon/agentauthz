@@ -12,7 +12,13 @@ export function describeAuthz(input = {}) {
     const names = registry?.listActions?.() ?? [];
     const actions = names.map((action) => {
         const parent = registry?.parentOf?.(action);
-        return parent === undefined ? { action } : { action, derivesFrom: parent };
+        const notes = registry?.annotationsOf?.(action);
+        return {
+            action,
+            ...(parent === undefined ? {} : { derivesFrom: parent }),
+            ...(notes?.title === undefined ? {} : { title: notes.title }),
+            ...(notes?.description === undefined ? {} : { description: notes.description }),
+        };
     });
     const actionClosures = {};
     const descendantsOf = registry?.descendantsOf;
@@ -27,6 +33,8 @@ export function describeAuthz(input = {}) {
             ...(spec.lowercase === true ? { lowercase: true } : {}),
             ...(Object.hasOwn(BUILTIN_CONDITION_KEYS, key) ? { builtIn: true } : {}),
             operators: operatorsFor(spec.type),
+            ...(spec.title === undefined ? {} : { title: spec.title }),
+            ...(spec.description === undefined ? {} : { description: spec.description }),
         };
     }
     return {

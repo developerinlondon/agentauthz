@@ -11,6 +11,8 @@ export const DESCRIPTOR_VERSION = 1;
 export interface DescribedAction {
   action: string;
   derivesFrom?: string;
+  title?: string;
+  description?: string;
 }
 
 export interface DescribedConditionKey {
@@ -20,6 +22,8 @@ export interface DescribedConditionKey {
   // Derived from `type` via OPERATOR_KEY_TYPE, never authored: a UI that
   // duplicated that table would drift from it.
   operators: ConditionOperator[];
+  title?: string;
+  description?: string;
 }
 
 export interface AuthzDescriptor {

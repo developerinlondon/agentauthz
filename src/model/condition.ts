@@ -45,6 +45,10 @@ export const OPERATOR_KEY_TYPE: Record<ConditionOperator, ConditionKeyType> = {
 export interface ConditionKeySpec {
   type: ConditionKeyType;
   lowercase?: boolean;
+  // Presentation, not semantics: a UI labels the field from these instead of
+  // de-camelCasing the key. Optional everywhere, never evaluated.
+  title?: string;
+  description?: string;
 }
 
 // key → spec. A closed record: adding a key REQUIRES stating its type.

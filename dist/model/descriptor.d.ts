@@ -3,12 +3,16 @@ export declare const DESCRIPTOR_VERSION = 1;
 export interface DescribedAction {
     action: string;
     derivesFrom?: string;
+    title?: string;
+    description?: string;
 }
 export interface DescribedConditionKey {
     type: ConditionKeyType;
     lowercase?: true;
     builtIn?: true;
     operators: ConditionOperator[];
+    title?: string;
+    description?: string;
 }
 export interface AuthzDescriptor {
     version: typeof DESCRIPTOR_VERSION;

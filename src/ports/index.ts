@@ -29,6 +29,9 @@ export interface ActionRegistry {
   // Declaration order, for describeAuthz. Optional so a hand-rolled registry
   // that can only answer isKnownAction stays valid.
   listActions?(): string[];
+  // Presentation carried from the declaration, for describeAuthz. Optional for
+  // the same reason as listActions.
+  annotationsOf?(action: string): { title?: string; description?: string; } | undefined;
 }
 
 export function actionRegistryFromList(actions: readonly string[]): ActionRegistry {
@@ -45,11 +48,20 @@ export function actionRegistryFromCatalogue(
   entries: readonly ActionCatalogueEntry[],
 ): ActionRegistry {
   const { parents, children, actions } = indexActionCatalogue(entries);
+  const byAction = new Map(entries.map((e) => [e.action, e]));
   return {
     isKnownAction: (action) => actions.has(action),
     parentOf: (action) => parents.get(action),
     descendantsOf: (action) => collectDescendants(children, action),
     listActions: () => [...actions],
+    annotationsOf: (action) => {
+      const e = byAction.get(action);
+      if (!e || (e.title === undefined && e.description === undefined)) return undefined;
+      return {
+        ...(e.title === undefined ? {} : { title: e.title }),
+        ...(e.description === undefined ? {} : { description: e.description }),
+      };
+    },
   };
 }
 

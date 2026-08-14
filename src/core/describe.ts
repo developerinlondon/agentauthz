@@ -34,7 +34,13 @@ export function describeAuthz(input: DescribeInput = {}): AuthzDescriptor {
 
   const actions: DescribedAction[] = names.map((action) => {
     const parent = registry?.parentOf?.(action);
-    return parent === undefined ? { action } : { action, derivesFrom: parent };
+    const notes = registry?.annotationsOf?.(action);
+    return {
+      action,
+      ...(parent === undefined ? {} : { derivesFrom: parent }),
+      ...(notes?.title === undefined ? {} : { title: notes.title }),
+      ...(notes?.description === undefined ? {} : { description: notes.description }),
+    };
   });
 
   const actionClosures: Record<string, string[]> = {};
@@ -50,6 +56,8 @@ export function describeAuthz(input: DescribeInput = {}): AuthzDescriptor {
       ...(spec.lowercase === true ? { lowercase: true as const } : {}),
       ...(Object.hasOwn(BUILTIN_CONDITION_KEYS, key) ? { builtIn: true as const } : {}),
       operators: operatorsFor(spec.type),
+      ...(spec.title === undefined ? {} : { title: spec.title }),
+      ...(spec.description === undefined ? {} : { description: spec.description }),
     };
   }
 

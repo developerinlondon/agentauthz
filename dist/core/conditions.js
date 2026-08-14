@@ -35,9 +35,21 @@ import { CONDITION_OPERATORS, isSetOperator, OPERATOR_KEY_TYPE, } from "../model
 //     carried one; a headless/internal check leaves it unpopulated so a
 //     condition on it fails closed.
 export const BUILTIN_CONDITION_KEYS = {
-    "request:Time": { type: "date" },
-    "request:HourUTC": { type: "number" },
-    "request:SourceIp": { type: "ip" },
+    "request:Time": {
+        type: "date",
+        title: "Before a date",
+        description: "The instant the check is evaluated, RFC 3339.",
+    },
+    "request:HourUTC": {
+        type: "number",
+        title: "Hour of day (UTC)",
+        description: "0-23 on the evaluation clock.",
+    },
+    "request:SourceIp": {
+        type: "ip",
+        title: "Source IP",
+        description: "The caller's network address, matched by CIDR.",
+    },
 };
 // Host keys merged with the built-ins; the built-ins always win so a host
 // declaration can never redefine what request:* means.
