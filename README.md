@@ -238,20 +238,12 @@ const handler = createAdminHandler({
 **These handlers never decide who may administer.** That is yours, and mounting them unauthenticated
 exposes grant creation to anyone who can reach the path.
 
-`@neutroncore/authz/ui` is one generic React component over those routes. It imports no host
-vocabulary — everything project-specific arrives at runtime in the descriptor, so a host that
-declares a new condition key gets a new form field with no frontend change:
-
-```tsx
-import { AuthzAdmin } from "@neutroncore/authz/ui";
-
-<AuthzAdmin baseUrl="/api/v1/authz" fetch={authedFetch} />;
-```
-
-`react` is an **optional** peer and nothing outside `src/ui` imports it, so a service that only uses
-the engine never pulls it in. Theming is CSS custom properties only (`--authz-fg`, `--authz-accent`,
-`--authz-font` defaulting to `inherit`, …) — no hard-coded palette. For a host with its own design
-system, `useAuthzAdmin()` exposes the same logic headless, with no markup.
+There is deliberately no UI in this package. Two production integrations each built their own
+screens over the served descriptor, and neither imported the generic component this package used
+to ship — so it was removed rather than maintained for nobody. The division of labour that
+survived both consumers: the engine supplies what the vocabulary means — keys, types, operators,
+closures, titles — and the host supplies how it looks. Everything a screen needs is in the
+`describeAuthz()` document and the routes above; `react` is no longer a peer of anything.
 
 ### Grant bounds
 
