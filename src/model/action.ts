@@ -56,6 +56,8 @@ export function actionAncestry(requested: string, parentOf?: ActionParentLookup)
 export interface ActionCatalogueEntry {
   action: string;
   derivesFrom?: string;
+  title?: string;
+  description?: string;
 }
 
 export class ActionCatalogueError extends Error {}

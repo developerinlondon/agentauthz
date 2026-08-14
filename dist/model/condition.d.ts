@@ -5,6 +5,8 @@ export declare const OPERATOR_KEY_TYPE: Record<ConditionOperator, ConditionKeyTy
 export interface ConditionKeySpec {
     type: ConditionKeyType;
     lowercase?: boolean;
+    title?: string;
+    description?: string;
 }
 export type ConditionKeys = Record<string, ConditionKeySpec>;
 export interface PolicyCondition {

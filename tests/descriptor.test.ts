@@ -46,6 +46,8 @@ describe("descriptor degradation", () => {
       type: "ip",
       builtIn: true,
       operators: ["IpAddress", "NotIpAddress"],
+      title: "Source IP",
+      description: "The caller's network address, matched by CIDR.",
     });
     expect(d.conditionKeys["app:Region"]).toBeUndefined();
   });
@@ -102,5 +104,41 @@ describe("descriptor operator round-trip", () => {
         expect(descriptor.setOperators.includes(operator)).toBe(takesValues);
       }
     }
+  });
+});
+
+describe("descriptor annotations", () => {
+  test("a host key's title and description reach the document", () => {
+    const d = describeAuthz({
+      conditionKeys: {
+        "x:pool": { type: "string", title: "Node pools", description: "Which pools it may use." }
+      }
+    });
+    expect(d.conditionKeys["x:pool"]?.title).toBe("Node pools");
+    expect(d.conditionKeys["x:pool"]?.description).toBe("Which pools it may use.");
+  });
+
+  test("an unannotated key carries no annotation fields at all", () => {
+    const d = describeAuthz({ conditionKeys: { "x:plain": { type: "string" } } });
+    expect(Object.hasOwn(d.conditionKeys["x:plain"] ?? {}, "title")).toBe(false);
+  });
+
+  test("builtins arrive pre-labelled, so no consumer renders a camelCase fragment", () => {
+    const d = describeAuthz({});
+    expect(d.conditionKeys["request:HourUTC"]?.title).toBe("Hour of day (UTC)");
+    expect(d.conditionKeys["request:SourceIp"]?.title).toBe("Source IP");
+  });
+
+  test("an action's annotations flow from the catalogue through the registry", () => {
+    const registry = actionRegistryFromCatalogue([
+      { action: "widgets.author", title: "Author widgets", description: "Create and edit." },
+      { action: "widgets.read", derivesFrom: "widgets.author" }
+    ]);
+    const d = describeAuthz({ actionRegistry: registry });
+    const author = d.actions.find((a) => a.action === "widgets.author");
+    expect(author?.title).toBe("Author widgets");
+    const read = d.actions.find((a) => a.action === "widgets.read");
+    expect(Object.hasOwn(read ?? {}, "title")).toBe(false);
+    expect(read?.derivesFrom).toBe("widgets.author");
   });
 });

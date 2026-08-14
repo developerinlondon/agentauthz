@@ -9,6 +9,10 @@ export interface ActionRegistry {
     parentOf?: ActionParentLookup;
     descendantsOf?(action: string): string[];
     listActions?(): string[];
+    annotationsOf?(action: string): {
+        title?: string;
+        description?: string;
+    } | undefined;
 }
 export declare function actionRegistryFromList(actions: readonly string[]): ActionRegistry;
 export declare function actionRegistryFromCatalogue(entries: readonly ActionCatalogueEntry[]): ActionRegistry;

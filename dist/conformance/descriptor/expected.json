@@ -1,16 +1,35 @@
 {
   "version": 1,
   "actions": [
-    { "action": "widgets.read" },
-    { "action": "widgets.list", "derivesFrom": "widgets.read" },
-    { "action": "widgets.write", "derivesFrom": "widgets.read" },
-    { "action": "widgets.publish", "derivesFrom": "widgets.write" },
-    { "action": "audit.read" }
+    {
+      "action": "widgets.read"
+    },
+    {
+      "action": "widgets.list",
+      "derivesFrom": "widgets.read"
+    },
+    {
+      "action": "widgets.write",
+      "derivesFrom": "widgets.read"
+    },
+    {
+      "action": "widgets.publish",
+      "derivesFrom": "widgets.write"
+    },
+    {
+      "action": "audit.read"
+    }
   ],
   "actionClosures": {
-    "widgets.read": ["widgets.list", "widgets.publish", "widgets.write"],
+    "widgets.read": [
+      "widgets.list",
+      "widgets.publish",
+      "widgets.write"
+    ],
     "widgets.list": [],
-    "widgets.write": ["widgets.publish"],
+    "widgets.write": [
+      "widgets.publish"
+    ],
     "widgets.publish": [],
     "audit.read": []
   },
@@ -29,32 +48,63 @@
     },
     "app:MaxCpu": {
       "type": "number",
-      "operators": ["NumericLessThan", "NumericGreaterThan"]
+      "operators": [
+        "NumericLessThan",
+        "NumericGreaterThan"
+      ]
     },
     "app:Cidr": {
       "type": "ip",
-      "operators": ["IpAddress", "NotIpAddress"]
+      "operators": [
+        "IpAddress",
+        "NotIpAddress"
+      ]
     },
     "app:NotBefore": {
       "type": "date",
-      "operators": ["DateLessThan", "DateGreaterThan"]
+      "operators": [
+        "DateLessThan",
+        "DateGreaterThan"
+      ]
     },
     "request:Time": {
       "type": "date",
       "builtIn": true,
-      "operators": ["DateLessThan", "DateGreaterThan"]
+      "operators": [
+        "DateLessThan",
+        "DateGreaterThan"
+      ],
+      "title": "Before a date",
+      "description": "The instant the check is evaluated, RFC 3339."
     },
     "request:HourUTC": {
       "type": "number",
       "builtIn": true,
-      "operators": ["NumericLessThan", "NumericGreaterThan"]
+      "operators": [
+        "NumericLessThan",
+        "NumericGreaterThan"
+      ],
+      "title": "Hour of day (UTC)",
+      "description": "0-23 on the evaluation clock."
     },
     "request:SourceIp": {
       "type": "ip",
       "builtIn": true,
-      "operators": ["IpAddress", "NotIpAddress"]
+      "operators": [
+        "IpAddress",
+        "NotIpAddress"
+      ],
+      "title": "Source IP",
+      "description": "The caller's network address, matched by CIDR."
     }
   },
-  "scopeKinds": ["root", "project"],
-  "setOperators": ["StringIn", "StringNotIn", "StringLikeIn"]
+  "scopeKinds": [
+    "root",
+    "project"
+  ],
+  "setOperators": [
+    "StringIn",
+    "StringNotIn",
+    "StringLikeIn"
+  ]
 }

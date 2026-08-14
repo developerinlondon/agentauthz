@@ -14,11 +14,21 @@ export function actionRegistryFromList(actions) {
 // itself declared and that the graph is acyclic. Throws on a bad vocabulary.
 export function actionRegistryFromCatalogue(entries) {
     const { parents, children, actions } = indexActionCatalogue(entries);
+    const byAction = new Map(entries.map((e) => [e.action, e]));
     return {
         isKnownAction: (action) => actions.has(action),
         parentOf: (action) => parents.get(action),
         descendantsOf: (action) => collectDescendants(children, action),
         listActions: () => [...actions],
+        annotationsOf: (action) => {
+            const e = byAction.get(action);
+            if (!e || (e.title === undefined && e.description === undefined))
+                return undefined;
+            return {
+                ...(e.title === undefined ? {} : { title: e.title }),
+                ...(e.description === undefined ? {} : { description: e.description }),
+            };
+        },
     };
 }
 //# sourceMappingURL=index.js.map

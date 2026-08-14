@@ -6,6 +6,8 @@ export declare function actionAncestry(requested: string, parentOf?: ActionParen
 export interface ActionCatalogueEntry {
     action: string;
     derivesFrom?: string;
+    title?: string;
+    description?: string;
 }
 export declare class ActionCatalogueError extends Error {
 }
