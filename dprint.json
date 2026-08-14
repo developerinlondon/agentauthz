@@ -9,7 +9,10 @@
     "**/target",
     "**/.git",
     "**/node_modules",
-    ".omc"
+    ".omc",
+    "docs/content",
+    "docs/public",
+    "example/ui.html"
   ],
   "includes": ["**/*.{ts,tsx,md,yml,yaml,json,toml,lua}"],
   "plugins": [

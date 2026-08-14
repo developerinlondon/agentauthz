@@ -1,0 +1,58 @@
+baseURL: https://developerinlondon.github.io/neutron-authz/
+title: "@neutroncore/authz"
+locale: en-us
+enableInlineShortcodes: true
+
+module:
+  imports:
+    - path: github.com/imfing/hextra
+
+markup:
+  goldmark:
+    renderer:
+      unsafe: true
+  highlight:
+    noClasses: false
+
+enableRobotsTXT: true
+
+menu:
+  main:
+    - name: Documentation
+      pageRef: /docs
+      weight: 1
+    - name: Example
+      pageRef: /docs/example
+      weight: 2
+    - name: Search
+      weight: 3
+      params:
+        type: search
+    - name: GitHub
+      weight: 4
+      url: "https://github.com/developerinlondon/neutron-authz"
+      params:
+        icon: github
+    - name: Theme
+      weight: 5
+      params:
+        type: theme-toggle
+
+params:
+  navbar:
+    displayTitle: true
+    displayLogo: false
+  footer:
+    displayCopyright: false
+    displayPoweredBy: false
+  editURL:
+    enable: true
+    base: "https://github.com/developerinlondon/neutron-authz/edit/main/docs/content"
+  page:
+    width: normal
+  theme:
+    default: system
+    displayToggle: true
+  highlight:
+    copy:
+      enable: true

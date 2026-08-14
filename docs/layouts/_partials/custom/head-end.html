@@ -1,0 +1,20 @@
+<script>
+  // One-click theme toggle: a click on the navbar toggle cycles light/dark
+  // directly instead of opening hextra's three-option menu. Capture phase, so
+  // the stock menu handler never runs.
+  document.addEventListener("DOMContentLoaded", function () {
+    document.querySelectorAll(".hextra-theme-toggle").forEach(function (btn) {
+      btn.addEventListener("click", function (e) {
+        e.preventDefault();
+        e.stopImmediatePropagation();
+        var current = document.documentElement.classList.contains("dark") ? "dark" : "light";
+        var next = current === "dark" ? "light" : "dark";
+        document.documentElement.classList.remove("light", "dark");
+        document.documentElement.classList.add(next);
+        document.documentElement.style.colorScheme = next;
+        localStorage.setItem("color-theme", next);
+        btn.parentElement.dataset.theme = next;
+      }, true);
+    });
+  });
+</script>

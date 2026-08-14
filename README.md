@@ -4,6 +4,9 @@ Embeddable TypeScript authorization engine: policy statements + grants-at-scope 
 conditions, deny-wins, asymmetric fail-closed. **Policies are rows in your own database**, authored
 at runtime — by an admin UI, or by an agent — not files compiled into a deployment.
 
+**Documentation: <https://developerinlondon.github.io/neutron-authz/>** — architecture, semantics,
+the admin surface, and a [runnable example host](example/) with a working admin UI.
+
 ```sh
 npm install @neutroncore/authz     # or: bun add / pnpm add / yarn add
 ```
@@ -239,11 +242,11 @@ const handler = createAdminHandler({
 exposes grant creation to anyone who can reach the path.
 
 There is deliberately no UI in this package. Two production integrations each built their own
-screens over the served descriptor, and neither imported the generic component this package used
-to ship — so it was removed rather than maintained for nobody. The division of labour that
-survived both consumers: the engine supplies what the vocabulary means — keys, types, operators,
-closures, titles — and the host supplies how it looks. Everything a screen needs is in the
-`describeAuthz()` document and the routes above; `react` is no longer a peer of anything.
+screens over the served descriptor, and neither imported the generic component this package used to
+ship — so it was removed rather than maintained for nobody. The division of labour that survived
+both consumers: the engine supplies what the vocabulary means — keys, types, operators, closures,
+titles — and the host supplies how it looks. Everything a screen needs is in the `describeAuthz()`
+document and the routes above; `react` is no longer a peer of anything.
 
 ### Grant bounds
 
