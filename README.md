@@ -1,342 +1,134 @@
 # @neutroncore/authz
 
 Embeddable TypeScript authorization engine: policy statements + grants-at-scope + typed ABAC
-conditions, deny-wins, asymmetric fail-closed. **Policies are rows in your own database**, authored
+conditions, deny-wins, asymmetric fail-closed. **Policies are rows in your own Postgres**, authored
 at runtime — by an admin UI, or by an agent — not files compiled into a deployment.
 
-**Documentation: <https://developerinlondon.github.io/neutron-authz/>** — architecture, semantics,
-the admin surface, and a [runnable example host](example/) with a working admin UI.
+**Documentation: <https://developerinlondon.github.io/neutron-authz/>**
 
 ```sh
-npm install @neutroncore/authz     # or: bun add / pnpm add / yarn add
+npm install @neutroncore/authz        # or: bun add / pnpm add / yarn add
+npm install @neutroncore/authz kysely # kysely only for the shipped Postgres backend
 ```
 
-Ships compiled ESM with type declarations, so plain Node (>=20) can consume it — no TypeScript
-runtime or bundler required. `kysely` is an optional peer, needed only for the Postgres backend:
+Compiled ESM with type declarations — plain Node ≥ 20, no bundler. Zero runtime dependencies.
 
-```sh
-npm install @neutroncore/authz kysely
-```
-
-```text
-src/
-├── model/        statement, grant, condition, subject {kind,id}, scope shapes — THE SPEC
-├── core/         pure evaluator (zero deps, no I/O) + validate/repair + SoD approvals
-├── conformance/  golden JSON fixtures: every semantic as data-driven cases + runner
-├── admin/        (Request) => Response routes over the descriptor
-├── ui/           one generic React component + headless hook (react optional)
-├── ports/        GrantStore · AuditSink · ScopeRoleSynthesizer · ActionRegistry ·
-│                 ConditionKeys · SubjectDirectory
-└── backends/pg/  reference Kysely adapter + migrations (authz_policies · authz_grants · authz_audit)
-```
-
-## Why this exists
-
-Most authorization libraries are evaluators: you hand them policies and entities, they return a
-decision, and storage is your problem. That is the right split when policies are written by
-developers and shipped in git. It is the wrong split when policies are data — written by admins
-through a UI, or drafted by an agent — because then you need a schema, migrations, validation on
-write, and an audit trail, and you end up building those anyway.
-
-This ships both halves, in-process, against your own Postgres. No extra service, no network hop, no
-cache-invalidation webhook, no fail-open-when-the-PDP-is-down question.
-
-**Use Cedar instead** if your policies live in git and you want a formally verified evaluator — it
-is excellent, and it is a component rather than a solution. **Use OpenFGA or SpiceDB instead** if
-your model is relationship-based (ReBAC) rather than statement-based, and you can run another
-stateful service.
-
-## Semantics (the contract)
-
-- **Statement** `{effect, actions, resources, conditions?}` — actions from a closed host registry,
-  NEVER wildcarded; resources exact or single trailing `*`; conditions typed
-  `{operator, key, value}` (or `values` for set operators), no expression language.
-- **Grant** = (policy, subject `{kind,id}`, scope `{kind,id}`). A check evaluates against an
-  ordered, host-resolved scope chain (root first): every grant at any chain scope applies — **deny
-  anywhere beats allow anywhere**; nothing granted ⇒ deny.
-- **Conditions** are tri-state (`match` / `no-match` / `unmatchable`) and **asymmetric
-  fail-closed**: an allow contributes only on a definitive match; a deny fires on match AND on
-  unmatchable (an unevaluable deny stays standing). Malformed input — scope chain, subjects,
-  condition shapes — always denies.
-- **Two enforcement points, same rules.** `validateStatements` rejects a bad document at save time,
-  and the evaluator re-checks shape fail-closed at decision time — so a row written by an older code
-  path, a migration or a future bug still cannot widen authority silently. Each condition key
-  declares the type its context value carries, and that type fixes which operator family may test
-  it.
-- **Role synthesis**: app-owned role rows become grants at check time via `ScopeRoleSynthesizer` —
-  one storage, no dual-write; synthesized grants join the same deny-wins union.
-- The host keeps, permanently: authn → subjects resolution, admin-bypass decision (`bypass` check
-  option), token minting, HTTP routes, admin UI, action vocabulary.
-
-A flat model is supported: leave `scopeKinds` unset and pass a single root scope as
-`defaultScopeChain`. The hierarchy is available, not mandatory.
-
-## Conditions
-
-Conditions are typed triples, never expressions. Scalar operators read `value`; set operators read
-`values`. Exactly one is populated — a condition carrying both is unmatchable rather than a guess at
-which the author meant.
-
-| Operator                                 | Bound    | Key type | Notes                                                    |
-| ---------------------------------------- | -------- | -------- | -------------------------------------------------------- |
-| `StringEquals` / `StringNotEquals`       | `value`  | string   | array context ⇒ set-wise                                 |
-| `StringLike`                             | `value`  | string   | **exact, or one trailing `*`** — not a glob, not a regex |
-| `StringIn` / `StringNotIn`               | `values` | string   | membership; `StringNotIn` is the exact negation          |
-| `StringLikeIn`                           | `values` | string   | membership across trailing-`*` prefix patterns           |
-| `NumericLessThan` / `NumericGreaterThan` | `value`  | number   | **the bound is a string**: `"5"`, not `5`                |
-| `DateLessThan` / `DateGreaterThan`       | `value`  | date     | value must carry `Z` or an explicit offset               |
-| `IpAddress` / `NotIpAddress`             | `value`  | ip       | CIDR membership, IPv4 and IPv6                           |
-
-Two shapes read as working policies but are not, so they are called out rather than left to be
-discovered: `StringLike` is **prefix-only**, so `"infra|lite"` is a literal string that matches
-nothing; and a numeric bound is a **string**, so `value: 5` is a type error that yields an
-unmatchable condition rather than a loud failure. Both are rejected by `validateStatements` on the
-write path.
-
-An allowlist is one condition, not one statement per permitted value:
+## Sixty seconds
 
 ```ts
-conditions: [
-  { operator: "StringIn", key: "app:Pool", values: ["infra", "lite"] },
-  { operator: "StringEquals", key: "app:Registry", value: "registry.example.com" },
-];
-```
-
-With a list on both sides — a policy list and a multi-valued context key — the semantic is a
-**non-empty intersection**: the request holds at least one permitted value. `StringNotIn` is its
-exact negation, true only when nothing intersects. An empty `values` list is rejected at write time
-and unmatchable at evaluation, so it can never read as a vacuous allow.
-
-## Action derivation
-
-A host with a large action vocabulary would otherwise enumerate every action in every statement that
-morally covers it — so adding an endpoint means revisiting every policy, and the failure is silent
-in both directions. A host may instead declare that one action derives from another:
-
-```ts
+import { PgAuthzStore } from "@neutroncore/authz/backends/pg";
+import { makeAuthz } from "@neutroncore/authz/core";
 import { actionRegistryFromCatalogue } from "@neutroncore/authz/ports";
 
-const actions = actionRegistryFromCatalogue([
-  { action: "edit" },
-  { action: "docs.update", derivesFrom: "edit" },
-  { action: "docs.delete", derivesFrom: "docs.update" },
-]);
+const store = new PgAuthzStore(db, {
+  scopeKinds: ["root", "project"],
+  rootScope: { kind: "root", id: "*" },
+});
 
-actions.descendantsOf("edit"); // ["docs.delete", "docs.update"]
-```
-
-A statement naming `edit` now covers both, transitively. Three properties make this safe:
-
-- **It is not a wildcard.** A wildcard matches unknown and future actions; a derivation expands to a
-  declared, closed, enumerable set whose every member `isKnownAction` still gates. `descendantsOf`
-  lists exactly what a statement permits, so a UI can render the 21 actions rather than `edit *`.
-- **Deny expands exactly as allow does.** A deny naming `edit` stops everything deriving from it.
-  The alternative — deny matching exactly while allow expands — would make deny narrower than allow
-  and invert the engine's posture.
-- **Derivation is registry data, not policy data.** A policy author, human or model, cannot invent
-  one. The catalogue rejects cycles, self-derivation and unknown parents when it is built.
-
-Derivation never runs downward or sideways: granting `docs.delete` does not grant `edit`, and a
-separate tree is untouched. Actions are single-parent, because deny expands too — multiple parents
-would let a deny on any ancestor silently kill a leaf.
-
-If an ancestry cannot be resolved (a cycle reaching a hand-rolled `parentOf`), the match is
-`unresolvable` rather than absent, and it resolves asymmetrically like a condition: an allow needs a
-definitive match, a deny fires anyway. A deny never stops covering its leaves because a lookup
-misbehaved.
-
-## Untrusted policy authors
-
-The engine has no expression language on purpose. Actions come from a closed registry the host
-declares, resources take at most one trailing wildcard, and conditions are typed triples — so a
-policy author cannot smuggle in evaluation logic.
-
-That makes agent-drafted policy tractable:
-
-```ts
-import { repairDraft, validateStatements } from "@neutroncore/authz/core";
-
-// Model output is never trusted. Hallucinated actions and unknown resources are
-// dropped statement-by-statement; a draft left with no statements is rejected.
-const draft = repairDraft(modelJson, { isKnownAction, isKnownResource, conditionKeys });
-if (!draft.ok) return reject(draft.error);
-
-// Then the same validation every write path uses, before it reaches the store.
-const check = validateStatements(draft.statements, { isKnownAction, conditionKeys });
-```
-
-An agent-written `deny` that cannot be evaluated still denies — it is not skipped. That is a
-deliberate divergence from Cedar, which ignores erroring policies in both directions.
-
-## Usage
-
-```ts
-import { AuthzMigrationProvider, PgAuthzStore } from "@neutroncore/authz/backends/pg";
-import { makeAuthz } from "@neutroncore/authz/core";
-
-const config = { scopeKinds: ["root", "space"], rootScope: { kind: "root", id: "*" } };
-// Apply migrations into YOUR db (Kysely Migrator + AuthzMigrationProvider(config)),
-// or fold authzMigrations(config) into your own chain.
-
-const store = new PgAuthzStore(db, config);
 const authz = makeAuthz({
   grantStore: store,
   auditSink: store,
-  scopeKinds: config.scopeKinds,
-  defaultScopeChain: [config.rootScope],
-  conditionKeys: { "app:Email": { type: "string", lowercase: true } },
+  actionRegistry: actionRegistryFromCatalogue([
+    { action: "docs.read" },
+    { action: "docs.write", derivesFrom: "docs.read" }, // naming docs.read covers both — allow AND deny
+  ]),
+  conditionKeys: { "app:Region": { type: "string" } },
+  defaultScopeChain: [{ kind: "root", id: "*" }],
 });
 
-await authz.check(
-  [{ kind: "user", id: "alice@example.com" }, { kind: "role", id: "ops" }],
-  "docs.read",
-  "doc:support",
-  {
-    scopeChain: [config.rootScope, { kind: "space", id: "s1" }],
-    context: { "app:Email": "alice@example.com" },
-  },
-);
+await authz.check([{ kind: "user", id: "alice" }], "docs.write", "doc:42");
+// deny-wins over every grant in the scope chain; audited; nothing granted ⇒ false
 ```
 
-Built-in condition keys (`request:Time`, `request:HourUTC`, `request:SourceIp`) are populated by the
-engine; everything else is host-declared and host-populated — a key with no honest value stays
-unpopulated (fails closed).
+## The admin surface is data, and the UI writes itself
 
-## Administration
+The engine serves its whole vocabulary as a stable JSON document (`describe()`), plus framework-free
+`(Request) => Response` admin routes over it. Every screen below is generated from that document —
+declare a new condition key server-side and a new form field appears with **no frontend change**:
 
-Every admin screen — grants, policy browser, audit, bounds form — is a pure function of what the
-host already declared, so the library serves that vocabulary as data and ships one UI over it
-instead of leaving each host to rebuild the same screens.
+[![the example admin UI: grants with bounds, a generated bounds form, the coverage panel, a live check, the audit trail](https://developerinlondon.github.io/neutron-authz/images/example-ui.png)](example/)
 
-`describe()` projects the declared vocabulary into a stable, versioned JSON document: the actions
-with their derivation closures precomputed, each condition key with the operators its type admits,
-the scope kinds, and which operators take `values` rather than `value`.
+That page is [`example/ui.html`](example/) — one static file, no framework, no host knowledge. Run
+it: `cd example && bun install && bun run server.ts`.
 
-```ts
-const descriptor = authz.describe(); // or describeAuthz({ actionRegistry, conditionKeys, scopeKinds })
+## Architecture
+
+```mermaid
+flowchart LR
+    subgraph host["your application"]
+        R["routes"] --> C
+        UI["your admin UI"] --> H
+    end
+    subgraph lib["@neutroncore/authz — in-process"]
+        C["Authz.check()"] --> E["pure evaluator<br/>deny-wins · fail-closed"]
+        H["admin handlers"] --> D["describe()"]
+        E --> P[("GrantStore port")]
+        H --> P
+    end
+    P --> PG[("authz_* tables<br/>in YOUR Postgres")]
 ```
 
-`@neutroncore/authz/admin` turns that into routes — plain `(Request) => Promise<Response>`, so the
-same handlers run under Bun, Node, Deno and Workers with no framework adapter:
+The engine is a pure core behind ports. The shipped Postgres backend is the reference implementation
+— **any storage that passes the
+[conformance fixtures](https://developerinlondon.github.io/neutron-authz/docs/storage-and-conformance/)
+is decision-identical and drops in behind the same seam**, with zero call-site churn. The host keeps
+authentication, subject resolution, HTTP routing, the vocabulary, and what the admin UI looks like.
 
-```ts
-import { createAdminHandler } from "@neutroncore/authz/admin";
+## How it compares
 
-const handler = createAdminHandler({
-  descriptor: authz.describe(),
-  store, // PgAuthzStore satisfies AdminStore as-is
-  basePath: "/api/v1/authz",
-  actor: (req) => resolveAdmin(req), // recorded as creator and audit subject
-  auditSink: store,
-  subjects: { list: (q) => findSubjects(q) },
-});
-```
+|                                               | @neutroncore/authz                                                           | Cedar                      | OpenFGA / SpiceDB                             | Casbin                     |
+| --------------------------------------------- | ---------------------------------------------------------------------------- | -------------------------- | --------------------------------------------- | -------------------------- |
+| Runs as                                       | in-process library                                                           | in-process (WASM from JS)  | **separate stateful service**                 | in-process library         |
+| Policy shape                                  | typed statements + typed ABAC conditions                                     | Cedar policy language      | relationship tuples (+ CEL caveats)           | matcher expression strings |
+| Policies authored at runtime by admins/agents | first-class: schema-validated rows, named errors                             | possible; storage is yours | tuples via API; model changes are code-shaped | reload from adapters       |
+| Storage                                       | **shipped**: Postgres + migrations + at-rest checks; swappable behind a port | bring your own             | the service's own store                       | thin adapters              |
+| A deny whose condition can't evaluate         | **deny stands** (fail closed)                                                | erroring policy is skipped | n/a (graph model)                             | depends on the matcher     |
+| Per-decision audit trail                      | built in                                                                     | bring your own             | varies                                        | bring your own             |
+| Admin surface                                 | vocabulary served as data + HTTP handlers                                    | bring your own             | service APIs                                  | bring your own             |
+| Reverse queries ("who can see X"), at scale   | no — checks only                                                             | no                         | **yes — their home turf**                     | limited                    |
+| Formally verified evaluator                   | no                                                                           | **yes**                    | no                                            | no                         |
 
-| Route                                                 |                                                        |
-| ----------------------------------------------------- | ------------------------------------------------------ |
-| `GET /descriptor`                                     | the document a UI binds to                             |
-| `GET /grants` · `POST /grants` · `DELETE /grants/:id` | filterable by subject and scope; writes validate first |
-| `GET /policies` · `GET /subjects` · `GET /audit`      | read-only                                              |
+Two of those rows are the reason this library exists. When policies are **data written by admins and
+agents**, you need storage, migrations, write-time validation with errors a UI can show, an audit
+trail, and an admin surface — and with an evaluator-only library you build all five yourself. And
+when a deny's condition cannot be evaluated, this engine keeps the deny standing; an engine that
+skips an erroring policy fails **open** exactly where the author asked it to fail closed.
 
-**These handlers never decide who may administer.** That is yours, and mounting them unauthenticated
-exposes grant creation to anyone who can reach the path.
+Reach for the others where their strengths are real: **Cedar** if you want the formally verified
+evaluator and analysis tooling and are happy building the storage/audit/admin ring around it;
+**OpenFGA/SpiceDB** if your questions are graph-shaped over millions of relationships — reverse
+indexing at scale is genuinely their product, and this library does not do it.
 
-There is deliberately no UI in this package. Two production integrations each built their own
-screens over the served descriptor, and neither imported the generic component this package used to
-ship — so it was removed rather than maintained for nobody. The division of labour that survived
-both consumers: the engine supplies what the vocabulary means — keys, types, operators, closures,
-titles — and the host supplies how it looks. Everything a screen needs is in the `describeAuthz()`
-document and the routes above; `react` is no longer a peer of anything.
+## Concepts in one line each
 
-### Grant bounds
-
-A grant may carry `bounds` — conditions attached to the grant rather than the policy — so one
-curated policy is grantable with different limits per subject instead of spawning a policy per
-variation.
-
-```ts
-await store.createGrant({
-  policyId: contentAuthor.id,
-  subject: { kind: "user", id: "alice" },
-  scope: { kind: "project", id: "acme" },
-  bounds: [{ operator: "StringEquals", key: "app:Region", value: "eu-west" }],
-});
-```
-
-Bounds narrow **allow** statements only. Applied to a `deny` they would make it fire less often,
-which widens access — the one direction this engine never fails in. Re-granting replaces bounds
-rather than keeping the previous ones, so tightening a limit actually takes effect.
-
-## Storage
-
-`backends/pg` is a reference implementation on Kysely + Postgres, and it is the only one shipped.
-Every storage touchpoint is a port (`GrantStore`, `AuditSink`), so Prisma, Drizzle or another engine
-is an implementation away — but you write it. The conformance suite is how you prove it correct.
-
-## Conformance
-
-`src/conformance/cases/*.json` is the backend contract: language-neutral golden fixtures for
-deny-wins, scope inheritance, resource matching, condition semantics, asymmetric fail-closed,
-malformed-input, and role synthesis. Any alternative backend must decide every case identically —
-see `tests/pg.test.ts` for the storage-backed runner template. Cases marked `"storable": false`
-carry condition shapes the pg CHECK constraint refuses at rest; a shape-checking backend asserts the
-rejection instead.
-
-`src/conformance/descriptor/` is the same idea for the administration contract: a known vocabulary
-and the exact document it must produce, so a change to the descriptor shape is a deliberate act
-rather than a surprise for every UI downstream.
-
-### Folding the migrations into your own chain
-
-Run **every** migration, never a named one — a host that hardcodes
-`authzMigrations(cfg)["0001_authz"]` silently skips everything added later:
-
-```ts
-import { applyAuthzMigrations, revertAuthzMigrations } from "@neutroncore/authz/backends/pg";
-
-await applyAuthzMigrations(db, AUTHZ_CONFIG);
-```
-
-Each migration is idempotent, so a squashed baseline on a fresh database and a delta on a live one
-converge instead of colliding.
+| Concept           | In short                                                                                       | Docs                                                                                                     |
+| ----------------- | ---------------------------------------------------------------------------------------------- | -------------------------------------------------------------------------------------------------------- |
+| Statements        | `{effect, actions, resources, conditions?}` — actions from a closed registry, never wildcarded | [Semantics](https://developerinlondon.github.io/neutron-authz/docs/semantics/)                           |
+| Scope chains      | host-resolved, root-first; deny anywhere beats allow anywhere; malformed ⇒ deny                | [Semantics](https://developerinlondon.github.io/neutron-authz/docs/semantics/)                           |
+| Conditions        | typed operator whitelist, tri-state, asymmetric fail-closed — no expression language           | [Conditions](https://developerinlondon.github.io/neutron-authz/docs/conditions/)                         |
+| Action derivation | a statement naming a parent covers its declared, enumerable family — allow and deny alike      | [Semantics](https://developerinlondon.github.io/neutron-authz/docs/semantics/)                           |
+| Grant bounds      | conditions on the grant: one curated policy, different limits per subject; narrows allow only  | [Grants & bounds](https://developerinlondon.github.io/neutron-authz/docs/grants-and-bounds/)             |
+| Role synthesis    | app-owned role rows become grants at check time — one storage, no dual-write                   | [Architecture](https://developerinlondon.github.io/neutron-authz/docs/architecture/)                     |
+| Descriptor        | the vocabulary as versioned JSON; any UI on any runtime renders from it                        | [Admin surface](https://developerinlondon.github.io/neutron-authz/docs/admin-surface/)                   |
+| Conformance       | golden fixtures any alternative backend must decide identically — the swap-proof               | [Storage & conformance](https://developerinlondon.github.io/neutron-authz/docs/storage-and-conformance/) |
 
 ## Development
 
 ```sh
 bun install
-bun run build           # tsc emit to dist/ + conformance fixtures
-bun test                # pg suite needs DATABASE_URL (scratch db is created/dropped), e.g.:
-                        #   docker run -d --name authz-pg -e POSTGRES_PASSWORD=x -p 5436:5432 postgres:18-alpine
-                        #   echo 'DATABASE_URL=postgres://postgres:x@127.0.0.1:5436/postgres' > .env.test
-bunx tsc --noEmit       # TypeScript 7 native typecheck
-dprint fmt
+bun test                # pg suite needs DATABASE_URL (scratch db created/dropped)
+bunx tsc --noEmit
 ```
 
-## Installing from git
-
-The registry is the normal path. Installing straight from the repository also works — `dist/` is
-committed, so it resolves without a build step:
-
-```sh
-bun add github:developerinlondon/neutron-authz#v0.4.0
-```
-
-Regenerate it with `bun run build` after any change to `src/`.
+Installing straight from git also works (`bun add github:developerinlondon/neutron-authz#v0.4.1`) —
+`dist/` is committed and CI refuses a stale one.
 
 ## Releasing
 
-Bump `version` in `package.json`, merge, then push a matching tag:
-
-```sh
-git tag v0.4.0 && git push origin v0.4.0
-```
-
-The release workflow builds, typechecks and runs the whole suite — including the storage-backed
-conformance runner against a Postgres service — then publishes. It refuses a tag whose version
-disagrees with `package.json`, so a mistagged release cannot silently republish the previous one.
-
-Publishing uses npm trusted publishing: GitHub exchanges an OIDC token for a short-lived credential,
-so no npm token exists in the repository, in CI, or on a developer's machine.
+Bump `version` in `package.json`, merge, push the matching tag
+(`git tag v0.4.1 && git push origin v0.4.1`). The release workflow typechecks, runs the whole suite
+including the storage-backed conformance runner against Postgres, refuses a tag that disagrees with
+`package.json`, and publishes via npm trusted publishing — no token exists anywhere.
 
 ## License
 
