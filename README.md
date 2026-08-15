@@ -76,28 +76,28 @@ authentication, subject resolution, HTTP routing, the vocabulary, and what the a
 
 ## How it compares
 
-|                                               | @neutroncore/authz                                                           | Cedar                      | OpenFGA / SpiceDB                             | Casbin                     |
-| --------------------------------------------- | ---------------------------------------------------------------------------- | -------------------------- | --------------------------------------------- | -------------------------- |
-| Runs as                                       | in-process library                                                           | in-process (WASM from JS)  | **separate stateful service**                 | in-process library         |
-| Policy shape                                  | typed statements + typed ABAC conditions                                     | Cedar policy language      | relationship tuples (+ CEL caveats)           | matcher expression strings |
-| Policies authored at runtime by admins/agents | first-class: schema-validated rows, named errors                             | possible; storage is yours | tuples via API; model changes are code-shaped | reload from adapters       |
-| Storage                                       | **shipped**: Postgres + migrations + at-rest checks; swappable behind a port | bring your own             | the service's own store                       | thin adapters              |
-| A deny whose condition can't evaluate         | **deny stands** (fail closed)                                                | erroring policy is skipped | n/a (graph model)                             | depends on the matcher     |
-| Per-decision audit trail                      | built in                                                                     | bring your own             | varies                                        | bring your own             |
-| Admin surface                                 | vocabulary served as data + HTTP handlers                                    | bring your own             | service APIs                                  | bring your own             |
-| Reverse queries ("who can see X"), at scale   | no — checks only                                                             | no                         | **yes — their home turf**                     | limited                    |
-| Formally verified evaluator                   | no                                                                           | **yes**                    | no                                            | no                         |
+Authorization-when-policies-are-data has five parts: deciding, storing, validating, auditing,
+and administering. This library ships all five, in your process. The usual alternatives ship
+one.
 
-Two of those rows are the reason this library exists. When policies are **data written by admins and
-agents**, you need storage, migrations, write-time validation with errors a UI can show, an audit
-trail, and an admin surface — and with an evaluator-only library you build all five yourself. And
-when a deny's condition cannot be evaluated, this engine keeps the deny standing; an engine that
-skips an erroring policy fails **open** exactly where the author asked it to fail closed.
+|                                                | @neutroncore/authz                                                           | Cedar                      | OpenFGA / SpiceDB               | Casbin                    |
+| ---------------------------------------------- | ---------------------------------------------------------------------------- | -------------------------- | ------------------------------- | ------------------------- |
+| Decide + store + validate + audit + administer | **all five, out of the box**                                                 | evaluator only             | check service; the rest varies  | evaluator + thin adapters |
+| Extra infrastructure                           | **none** — in-process                                                        | none (WASM from JS)        | a stateful service to run       | none                      |
+| Runtime authoring by admins & agents           | **first-class** — schema-validated rows, named errors a UI shows verbatim    | build it yourself          | tuples via API                  | reload from adapters      |
+| Storage                                        | **shipped and swappable** — conformance fixtures prove a replacement backend | bring your own             | the service's own               | thin adapters             |
+| A deny whose condition can't evaluate          | **the deny stands** — fail closed                                            | erroring policy is skipped | n/a (graph model)               | depends on the matcher    |
+| Safe for untrusted/agent policy authors        | **by construction** — no expression language, closed vocabulary              | expression language        | n/a                             | evaluated matcher strings |
+| Per-decision audit                             | **built in**                                                                 | build it yourself          | varies                          | build it yourself         |
+| Admin surface                                  | **served as data** — descriptor + handlers, one UI fits any host             | build it yourself          | service APIs                    | build it yourself         |
 
-Reach for the others where their strengths are real: **Cedar** if you want the formally verified
-evaluator and analysis tooling and are happy building the storage/audit/admin ring around it;
-**OpenFGA/SpiceDB** if your questions are graph-shaped over millions of relationships — reverse
-indexing at scale is genuinely their product, and this library does not do it.
+Different products solve different problems: Cedar is a formally verified evaluator for
+policies engineers review in git — there, CI is the admin surface and the missing ring doesn't
+hurt. Zanzibar services answer graph questions ("list everything alice can see") over millions
+of relationships — a reverse-index query shape this library deliberately doesn't do. For the
+question *may this subject do this action on this resource, right now* — with the policies
+themselves written and administered at runtime — this is the complete package.
+[Full comparison →](https://developerinlondon.github.io/neutron-authz/docs/comparison/)
 
 ## Concepts in one line each
 
