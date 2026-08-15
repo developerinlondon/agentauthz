@@ -1,6 +1,6 @@
 ---
 title: Building a UI
-weight: 7
+weight: 8
 ---
 
 The library deliberately ships **no UI**: two integrations proved that every host wants its own

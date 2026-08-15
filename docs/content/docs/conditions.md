@@ -1,6 +1,6 @@
 ---
 title: Conditions
-weight: 4
+weight: 5
 ---
 
 Conditions are typed triples, never expressions. Scalar operators read `value`; set operators read
