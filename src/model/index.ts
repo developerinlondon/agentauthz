@@ -27,6 +27,7 @@ export {
   type DescribedConditionKey,
   DESCRIPTOR_VERSION,
 } from "./descriptor.js";
+export { AuthzError } from "./errors.js";
 export type { GrantBounds, GrantRecord, PolicyRecord, ResolvedGrant } from "./grant.js";
 export { isValidScope, type Scope, type ScopeChain, scopeEquals } from "./scope.js";
 export {

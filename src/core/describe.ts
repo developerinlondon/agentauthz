@@ -43,13 +43,13 @@ export function describeAuthz(input: DescribeInput = {}): AuthzDescriptor {
     };
   });
 
-  const actionClosures: Record<string, string[]> = {};
+  const actionClosures: Record<string, string[]> = Object.create(null);
   const descendantsOf = registry?.descendantsOf;
   if (descendantsOf) {
     for (const action of names) actionClosures[action] = descendantsOf.call(registry, action);
   }
 
-  const conditionKeys: Record<string, DescribedConditionKey> = {};
+  const conditionKeys: Record<string, DescribedConditionKey> = Object.create(null);
   for (const [key, spec] of Object.entries(resolveConditionKeys(input.conditionKeys))) {
     conditionKeys[key] = {
       type: spec.type,
@@ -69,4 +69,16 @@ export function describeAuthz(input: DescribeInput = {}): AuthzDescriptor {
     scopeKinds: [...(input.scopeKinds ?? [])],
     setOperators: [...SET_OPERATORS],
   };
+}
+
+// The projection back: a descriptor already carries each key's type and
+// lowercase flag, which is exactly ConditionKeys. An administrative surface
+// validating a bound therefore uses the same vocabulary its consumer was told
+// about, and the two cannot disagree about what is legal.
+export function conditionKeysFromDescriptor(descriptor: AuthzDescriptor): ConditionKeys {
+  const keys: ConditionKeys = Object.create(null);
+  for (const [key, spec] of Object.entries(descriptor.conditionKeys)) {
+    keys[key] = { type: spec.type, ...(spec.lowercase ? { lowercase: true } : {}) };
+  }
+  return resolveConditionKeys(keys);
 }

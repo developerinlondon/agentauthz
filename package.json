@@ -46,6 +46,10 @@
       "types": "./dist/admin/index.d.ts",
       "import": "./dist/admin/index.js"
     },
+    "./mcp": {
+      "types": "./dist/mcp/index.d.ts",
+      "import": "./dist/mcp/index.js"
+    },
     "./conformance": {
       "types": "./dist/conformance/index.d.ts",
       "import": "./dist/conformance/index.js"

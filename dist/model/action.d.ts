@@ -1,3 +1,4 @@
+import { AuthzError } from "./errors.js";
 export type ActionParentLookup = (action: string) => string | undefined;
 export declare const MAX_DERIVATION_DEPTH = 64;
 export type ActionMatch = "match" | "no-match" | "unresolvable";
@@ -9,7 +10,7 @@ export interface ActionCatalogueEntry {
     title?: string;
     description?: string;
 }
-export declare class ActionCatalogueError extends Error {
+export declare class ActionCatalogueError extends AuthzError {
 }
 export declare function indexActionCatalogue(entries: readonly ActionCatalogueEntry[]): {
     parents: Map<string, string>;

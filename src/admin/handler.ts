@@ -4,8 +4,7 @@
 // THEY NEVER DECIDE WHO MAY ADMINISTER. That is the host's, and mounting them
 // unauthenticated exposes grant creation to anyone who can reach the path.
 
-import { validateConditions } from "../core/conditions.js";
-import { resolveConditionKeys } from "../core/conditions.js";
+import { conditionKeysFromDescriptor } from "../core/describe.js";
 import type { ConditionKeys } from "../model/condition.js";
 import type { AuthzDescriptor } from "../model/descriptor.js";
 import type { GrantBounds } from "../model/grant.js";
@@ -13,6 +12,7 @@ import { isValidScope } from "../model/scope.js";
 import { isValidSubject, type Subject } from "../model/subject.js";
 import type { AuditSink } from "../ports/index.js";
 import type { AdminStore, SubjectLister } from "./types.js";
+import { normalizeBounds, recordAdminWrite } from "./writes.js";
 
 export interface AdminSurfaceOptions {
   descriptor: AuthzDescriptor;
@@ -37,14 +37,7 @@ function auditWrite(
   resource: string,
   detail: Record<string, unknown>,
 ): void {
-  opts.auditSink?.record({
-    subjects: actor ? [actor] : [],
-    action,
-    resource,
-    decision: "executed",
-    source: "authz-admin",
-    detail,
-  });
+  recordAdminWrite(opts.auditSink, actor, action, resource, detail, "authz-admin");
 }
 
 function json(body: unknown, status = 200): Response {
@@ -56,35 +49,11 @@ function json(body: unknown, status = 200): Response {
 
 const fail = (error: string, status: number) => json({ error }, status);
 
-// The descriptor already carries each key's type and lowercase flag, which is
-// exactly ConditionKeys — so validation uses the same vocabulary the UI was
-// told about, and the two cannot disagree about what is legal.
-function conditionKeysOf(descriptor: AuthzDescriptor): ConditionKeys {
-  const keys: ConditionKeys = {};
-  for (const [key, spec] of Object.entries(descriptor.conditionKeys)) {
-    keys[key] = { type: spec.type, ...(spec.lowercase ? { lowercase: true } : {}) };
-  }
-  return resolveConditionKeys(keys);
-}
-
 interface GrantBody {
   policyId?: unknown;
   subject?: unknown;
   scope?: unknown;
   bounds?: unknown;
-}
-
-type Parsed = { ok: true; value: NonNullable<unknown>; } | { ok: false; response: Response; };
-
-function parseBounds(raw: unknown, keys: ConditionKeys): Parsed {
-  if (raw === undefined || raw === null) return { ok: true, value: [] };
-  if (!Array.isArray(raw)) return { ok: false, response: fail("bounds must be an array", 400) };
-  if (raw.length === 0) return { ok: true, value: [] };
-  const v = validateConditions(raw, keys);
-  // The message is validateConditions' own, verbatim, so a UI surfaces the
-  // same text the engine would have produced at check time.
-  if (!v.ok) return { ok: false, response: fail(v.error, 400) };
-  return { ok: true, value: v.conditions };
 }
 
 async function createGrant(
@@ -107,9 +76,11 @@ async function createGrant(
   if (kinds.length > 0 && !kinds.includes(body.scope.kind)) {
     return fail(`scope kind "${body.scope.kind}" is not declared`, 400);
   }
-  const bounds = parseBounds(body.bounds, keys);
-  if (!bounds.ok) return bounds.response;
-  const list = bounds.value as GrantBounds;
+  const bounds = normalizeBounds(body.bounds, keys);
+  // The message is validateConditions' own, verbatim, so a UI surfaces the
+  // same text the engine would have produced at check time.
+  if (!bounds.ok) return fail(bounds.error, 400);
+  const list: GrantBounds = bounds.bounds;
   const actor = opts.actor?.(request) ?? null;
 
   await opts.store.createGrant({
@@ -183,7 +154,7 @@ export function createAdminHandler(
   opts: AdminSurfaceOptions,
 ): (request: Request) => Promise<Response> {
   const base = (opts.basePath ?? "").replace(/\/$/, "");
-  const keys = conditionKeysOf(opts.descriptor);
+  const keys = conditionKeysFromDescriptor(opts.descriptor);
 
   return async (request: Request): Promise<Response> => {
     const url = new URL(request.url);

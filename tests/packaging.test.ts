@@ -1,5 +1,5 @@
 import { describe, expect, test } from "bun:test";
-import { readdirSync, readFileSync, statSync } from "node:fs";
+import { existsSync, readdirSync, readFileSync, statSync } from "node:fs";
 import path from "node:path";
 import { fileURLToPath } from "node:url";
 
@@ -12,6 +12,7 @@ const pkg = JSON.parse(readFileSync(path.join(root, "package.json"), "utf8")) as
   dependencies?: Record<string, string>;
   peerDependencies?: Record<string, string>;
   peerDependenciesMeta?: Record<string, { optional?: boolean; }>;
+  exports: Record<string, { types: string; import: string; }>;
 };
 
 function sourceFiles(dir: string): string[] {
@@ -41,8 +42,19 @@ describe("the engine is presentation-free", () => {
 
 // The reason a security engine can carry a UI in the same tarball: the tarball
 // has no runtime dependencies to carry. If the UI ever needs one, that stops
-// being true and the packages should split.
+// being true and the packages should split. The MCP server is held to the same
+// bar — it speaks JSON-RPC itself rather than pulling in an SDK to do it.
 test("the package has zero runtime dependencies", () => {
   expect(pkg.dependencies ?? {}).toEqual({});
 });
 
+// An unbuilt subpath resolves to nothing, and only after publish, in someone
+// else's project.
+test("every declared export points at a built file", () => {
+  const missing = Object.entries(pkg.exports).flatMap(([subpath, targets]) =>
+    [targets.types, targets.import]
+      .filter((target) => !existsSync(path.join(root, target)))
+      .map((target) => `${subpath} → ${target}`)
+  );
+  expect(missing).toEqual([]);
+});

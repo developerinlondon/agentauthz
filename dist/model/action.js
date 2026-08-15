@@ -2,6 +2,7 @@
 // a statement naming a coarse action covers a declared family of finer ones.
 // Not a wildcard — the expansion is closed and enumerable, and every member
 // still passes the registry. Derivation is registry data, never policy data.
+import { AuthzError } from "./errors.js";
 // Reachable only via a hand-rolled lookup; catalogues reject cycles at build.
 export const MAX_DERIVATION_DEPTH = 64;
 // Walks upward from the REQUESTED action: statements name the base, checks
@@ -44,7 +45,7 @@ export function actionAncestry(requested, parentOf) {
     }
     return chain;
 }
-export class ActionCatalogueError extends Error {
+export class ActionCatalogueError extends AuthzError {
 }
 // Throws rather than degrading: a malformed vocabulary is a host bug at boot,
 // and the engine must never hold a graph it cannot enumerate.

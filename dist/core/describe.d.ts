@@ -7,4 +7,5 @@ export interface DescribeInput {
     scopeKinds?: readonly string[];
 }
 export declare function describeAuthz(input?: DescribeInput): AuthzDescriptor;
+export declare function conditionKeysFromDescriptor(descriptor: AuthzDescriptor): ConditionKeys;
 //# sourceMappingURL=describe.d.ts.map

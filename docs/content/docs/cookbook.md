@@ -1,6 +1,6 @@
 ---
 title: Cookbook
-weight: 9
+weight: 10
 icon: beaker
 aliases: [/docs/example/]
 ---

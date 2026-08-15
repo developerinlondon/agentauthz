@@ -99,6 +99,7 @@ themselves written and administered at runtime — this is the complete package.
 | Role synthesis    | app-owned role rows become grants at check time — one storage, no dual-write                   | [Architecture](https://developerinlondon.github.io/agentauthz/docs/architecture/)                     |
 | Descriptor        | the vocabulary as versioned JSON; any UI on any runtime renders from it                        | [Admin surface](https://developerinlondon.github.io/agentauthz/docs/admin-surface/)                   |
 | Conformance       | golden fixtures any alternative backend must decide identically — the swap-proof               | [Storage & conformance](https://developerinlondon.github.io/agentauthz/docs/storage-and-conformance/) |
+| MCP server        | agent-facing tools whose input schemas are generated from that same descriptor                 | [MCP server](https://developerinlondon.github.io/agentauthz/docs/mcp-server/)                         |
 
 ## Development
 

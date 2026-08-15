@@ -19,6 +19,7 @@ deployment.
   {{< card link="grants-and-bounds" icon="key" title="Grants & bounds" subtitle="One curated policy, different limits per subject" >}}
   {{< card link="admin-surface" icon="server" title="Admin surface" subtitle="describe(), the descriptor document, and the HTTP handlers" >}}
   {{< card link="building-a-ui" icon="template" title="Building a UI" subtitle="Generate every admin screen from the descriptor" >}}
+  {{< card link="mcp-server" icon="chip" title="MCP server" subtitle="Agent-facing tools whose schemas come from your vocabulary" >}}
   {{< card link="cookbook" icon="beaker" title="Cookbook" subtitle="A runnable host with a working admin UI, recipe by recipe" >}}
   {{< card link="storage-and-conformance" icon="database" title="Storage & conformance" subtitle="The pg backend, migrations, and the backend-flip contract" >}}
 {{< /cards >}}
