@@ -35,22 +35,7 @@ no call site reads grant storage directly. That is what makes the storage backen
 zero call-site churn: an alternative backend implements `GrantSource`, passes the
 [conformance suite](../storage-and-conformance#conformance), and the config flips.
 
-```mermaid
-sequenceDiagram
-    participant H as Host route
-    participant A as Authz.check
-    participant S as GrantStore
-    participant Y as Synthesizers
-    participant E as evaluator
-    H->>A: subjects, action, resource, opts
-    A->>A: validate scope chain (unknown kind ⇒ deny)
-    A->>S: grantsFor(subjects, chain)
-    A->>Y: grantsFor(subjects, chain)
-    A->>E: decide(stored ∪ synthesized)
-    E-->>A: allow / deny (deny wins)
-    A->>A: audit the decision
-    A-->>H: boolean
-```
+<img src="/neutron-authz/images/fig-check-flow.svg" style="max-width:100%" alt="A check: validate the scope chain, gather grants from the store and synthesizers, decide deny-wins, audit, answer" />
 
 **Role synthesis** deserves a note: app-owned role rows (a membership table, a device link) become
 grants _at check time_ via `ScopeRoleSynthesizer` — one storage, no dual-write. A synthesized grant

@@ -13,15 +13,7 @@ This page is the recipe. The [cookbook](../cookbook) implements all of it in one
 
 Everything renders from `GET /descriptor`. Nothing about your host is hard-coded:
 
-```mermaid
-flowchart LR
-    D["GET /descriptor"] --> K["conditionKeys<br/>+ per-key operators"]
-    D --> C["actionClosures"]
-    D --> S["scopeKinds"]
-    K --> F["bounds form<br/>(one field per key)"]
-    C --> V["coverage panel<br/>(what a grant confers)"]
-    S --> P["scope picker"]
-```
+<img src="/neutron-authz/images/fig-descriptor-ui.svg" style="max-width:100%" alt="The descriptor generates the bounds form, the coverage panel and the pickers — a new condition key means a new field with no frontend change" />
 
 ## Version gate first
 
