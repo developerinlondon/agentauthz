@@ -56,3 +56,15 @@ jobs:
     steps:
       - id: deployment
         uses: actions/deploy-pages@v4
+
+  verify:
+    if: github.ref == 'refs/heads/main'
+    needs: deploy
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v5
+      - run: npm install --no-save playwright && npx playwright install --with-deps chromium
+      - name: Verify the live site
+        env:
+          EXPECT_SHA: ${{ github.sha }}
+        run: node docs/verify-live.mjs
