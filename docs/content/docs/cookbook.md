@@ -15,7 +15,7 @@ bun install
 bun run server.ts     # → http://localhost:8787
 ```
 
-![the example admin UI, generated from the descriptor](/images/example-ui.png)
+<img src="/agentauthz/images/example-ui.png" style="max-width:100%" alt="the example admin UI, generated from the descriptor" />
 
 <img src="/agentauthz/images/fig-cookbook.svg" style="max-width:100%" alt="The cookbook host: the browser UI reads the descriptor and the admin routes from server.ts, which owns the in-memory store and a check probe" />
 

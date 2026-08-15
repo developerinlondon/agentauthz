@@ -66,4 +66,15 @@ jobs:
           fi
 
       # No NODE_AUTH_TOKEN: the OIDC handshake supplies the credential.
-      - run: npm publish
+      # A version already on the registry is skipped, not failed: a package's
+      # FIRST publish cannot use OIDC (the trusted-publisher config lives in
+      # npm package settings, which exist only once the package does), so it
+      # lands via a one-time token publish and the tag run must stay green.
+      - run: |
+          name="$(node -p "require('./package.json').name")"
+          version="$(node -p "require('./package.json').version")"
+          if npm view "${name}@${version}" version >/dev/null 2>&1; then
+            echo "${name}@${version} is already on the registry — skipping publish"
+            exit 0
+          fi
+          npm publish

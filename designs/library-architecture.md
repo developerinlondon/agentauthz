@@ -69,7 +69,7 @@ lockout floor, HTTP routes, admin UI, tool vocabulary/discovery, graph-reachabil
 | Decision              | Choice                                                                                                                                  |
 | --------------------- | --------------------------------------------------------------------------------------------------------------------------------------- |
 | Language / toolchain  | TypeScript 7 (Go-native tsc, GA 2026-07-08), Bun runtime, `bun test`                                                                    |
-| Distribution          | npm package `agentauthz` on npmjs.org                                                                     |
+| Distribution          | npm package `agentauthz` on npmjs.org                                                                                                   |
 | Storage               | Reference PG adapter, prefixed `authz_*` tables, migrations applied into the **host's** DB — never a separate authz DB (jeebon ADR 005) |
 | Back-compat           | NONE — neutron renames its live tables to `authz_*` and squashes its migration files in the flip MR (active development, both projects) |
 | Evaluation placement  | In-process (plan 015: no sidecar on the request/turn/tool-call path)                                                                    |

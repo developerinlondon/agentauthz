@@ -4,7 +4,7 @@ cascade:
   type: docs
 ---
 
-`agentauthz` is an embeddable TypeScript authorization engine. Policies are **rows in your
+`agentauthz` is an agent-native, embeddable TypeScript authorization engine. Policies are **rows in your
 own database**, written at runtime through an API or an admin UI, not files compiled into a
 deployment.
 

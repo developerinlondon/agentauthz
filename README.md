@@ -1,6 +1,6 @@
 # agentauthz
 
-Embeddable TypeScript authorization engine: policy statements + grants-at-scope + typed ABAC
+Agent-native authorization engine for TypeScript: policy statements + grants-at-scope + typed ABAC
 conditions, deny-wins, asymmetric fail-closed. **Policies are rows in your own database** — Postgres backend included, any conformant store
 drops in — authored
 at runtime — by an admin UI, or by an agent — not files compiled into a deployment.
@@ -114,7 +114,7 @@ Installing straight from git also works (`bun add github:developerinlondon/agent
 ## Releasing
 
 Bump `version` in `package.json`, merge, push the matching tag
-(`git tag v0.4.2 && git push origin v0.4.2`). The release workflow typechecks, runs the whole suite
+(`git tag v0.5.0 && git push origin v0.5.0`). The release workflow typechecks, runs the whole suite
 including the storage-backed conformance runner against Postgres, refuses a tag that disagrees with
 `package.json`, and publishes via npm trusted publishing — no token exists anywhere.
 
