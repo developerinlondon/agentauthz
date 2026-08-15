@@ -38,7 +38,6 @@ await server.runStdio(); // newline-delimited JSON-RPC on stdin/stdout
 | `store`      | `AdminStore`: grants, policies, audit                                              |
 | `descriptor` | overrides `authz.describe()` — serve agents a _narrower_ vocabulary than you decide by |
 | `actor`      | who is performing the write, for this connection                                   |
-| `subjects`   | optional subject lister                                                            |
 | `auditSink`  | where administrative writes are recorded                                           |
 
 An MCP session carries no per-request identity, so `actor` is fixed for the connection: a host
@@ -136,14 +135,19 @@ message, unmodified:
 
 That is the whole point of [named validation errors](../conditions/): the consumer is a program,
 and a program that is told _which condition_ and _why_ can correct itself and retry without a human
-translating. Store rejections pass through the same way.
+translating. A store rejection crosses the same way when the store throws `AuthzError`, and is
+masked otherwise — see the callout below.
 
 ## Protocol
 
 JSON-RPC 2.0 over newline-delimited JSON — `initialize`, `notifications/initialized`, `ping`,
 `tools/list`, `tools/call`. The advertised revision is `2025-06-18`; a client asking for
-`2025-03-26` or `2024-11-05` is answered in its own, as the tools surface is identical across the
-three. Capabilities are `tools` only: this server exposes no resources, prompts, or sampling.
+`2024-11-05` is answered in its own, as the tools surface is identical across the two. Capabilities
+are `tools` only: this server exposes no resources, prompts, or sampling.
+
+`2025-03-26` is deliberately **not** agreed to: that revision's stdio transport requires JSON-RPC
+batching, which this server refuses, so accepting it would be a promise it does not keep. A client
+on it is answered in `2025-06-18` and may accept or close.
 
 It is implemented here rather than on the MCP SDK, because this package has
 [zero runtime dependencies](../architecture/) and an authorization engine acquiring its first one
@@ -154,6 +158,13 @@ host's, by design — exactly as with the HTTP handlers. Anything that can reach
 call `authz_grant`, so gate the transport: a stdio server inherits the trust of the process that
 spawned it, and an HTTP-mounted one needs the same authentication as the admin routes.
 {{< /callout >}}
+
+{{< callout type="warning" >}} **Only the engine's own words cross to the model.** A rejection
+carrying an `AuthzError` — every validation failure above, and `SystemPolicyError` from the pg
+backend — is forwarded verbatim, because its message was written for a caller. Anything else
+becomes `internal error`: a storage driver's message can carry a connection string, a table name,
+or the contents of a row, and the caller here is an agent. A store that wants its own message read
+should throw `AuthzError`. {{< /callout >}}
 
 {{< callout type="warning" >}} **A narrowed `descriptor` withholds options; it does not withhold
 authority.** The engine still decides by its own vocabulary. Passing a narrower descriptor shapes

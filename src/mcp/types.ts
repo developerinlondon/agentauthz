@@ -1,4 +1,4 @@
-import type { AdminStore, SubjectLister } from "../admin/types.js";
+import type { AdminStore } from "../admin/types.js";
 import type { Authz } from "../core/authz.js";
 import type { AuthzDescriptor } from "../model/descriptor.js";
 import type { Subject } from "../model/subject.js";
@@ -15,7 +15,6 @@ export interface McpServerOptions {
   // to its agents; the ENGINE still decides by its own, so narrowing here
   // withholds options rather than granting any.
   descriptor?: AuthzDescriptor;
-  subjects?: SubjectLister;
   // Who is performing the write, resolved by the host for this connection —
   // recorded as the grant's creator and as the audit row's subject. An MCP
   // session has no per-request identity, so a host serving several

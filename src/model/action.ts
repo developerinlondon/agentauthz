@@ -3,6 +3,8 @@
 // Not a wildcard — the expansion is closed and enumerable, and every member
 // still passes the registry. Derivation is registry data, never policy data.
 
+import { AuthzError } from "./errors.js";
+
 // Single-parent by design: deny expands exactly as allow does, so multiple
 // parents would let a deny on ANY ancestor silently kill a leaf.
 export type ActionParentLookup = (action: string) => string | undefined;
@@ -60,7 +62,7 @@ export interface ActionCatalogueEntry {
   description?: string;
 }
 
-export class ActionCatalogueError extends Error {}
+export class ActionCatalogueError extends AuthzError {}
 
 // Throws rather than degrading: a malformed vocabulary is a host bug at boot,
 // and the engine must never hold a graph it cannot enumerate.

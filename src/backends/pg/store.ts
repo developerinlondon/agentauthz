@@ -1,4 +1,5 @@
 import { type ColumnType, type Generated, type Kysely, sql } from "kysely";
+import { AuthzError } from "../../model/errors.js";
 import type { GrantBounds, GrantRecord, PolicyRecord, ResolvedGrant } from "../../model/grant.js";
 import type { Scope, ScopeChain } from "../../model/scope.js";
 import type { PolicyStatement } from "../../model/statement.js";
@@ -16,7 +17,7 @@ import type { PgAuthzConfig } from "./config.js";
 // Thrown by updatePolicy/deletePolicy when the target is `system`: a curated,
 // immutable managed policy. Hosts map this to 400/403 — attach and
 // duplicate-to-customize stay open.
-export class SystemPolicyError extends Error {}
+export class SystemPolicyError extends AuthzError {}
 
 interface Tables {
   authz_policies: {

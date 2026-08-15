@@ -134,7 +134,7 @@ export function boundsSchema(descriptor) {
 // engine from the real check inputs and would be overwritten, so offering them
 // here would invite a model to supply a value that is silently discarded.
 export function contextSchema(descriptor) {
-    const properties = {};
+    const properties = Object.create(null);
     for (const [key, spec] of Object.entries(descriptor.conditionKeys)) {
         if (spec.builtIn)
             continue;

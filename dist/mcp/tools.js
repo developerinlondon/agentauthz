@@ -6,6 +6,7 @@
 // has handed it grant creation; gating that is the host's, at the transport.
 import { normalizeBounds, recordAdminWrite } from "../admin/writes.js";
 import { conditionKeysFromDescriptor } from "../core/describe.js";
+import { AuthzError } from "../model/errors.js";
 import { optionalContext, optionalNumber, optionalScopeChain, optionalString, requiredScope, requiredString, requiredSubject, requiredSubjects, toolArgs, } from "./args.js";
 import { actionSchema, boundsSchema, contextSchema, scopeSchema, SUBJECT_SCHEMA, } from "./schema.js";
 // The door these writes came through, as the audit row's source — the admin
@@ -26,6 +27,14 @@ function object(properties, required = []) {
 }
 const NO_ARGS = object({});
 const STRING = { type: "string" };
+// The pg backend clamps a listing to this range; a store that does not is held
+// to it here, so the same request cannot mean "one page" against one backend
+// and "the whole table" against another.
+const AUDIT_LIMIT_MIN = 1;
+const AUDIT_LIMIT_MAX = 200;
+function clampAuditLimit(limit) {
+    return Math.min(Math.max(Math.trunc(limit), AUDIT_LIMIT_MIN), AUDIT_LIMIT_MAX);
+}
 async function check(args, ctx) {
     const opts = { source: AUDIT_SOURCE };
     const scopeChain = optionalScopeChain(args, "scopeChain");
@@ -45,11 +54,11 @@ async function grant(args, ctx) {
     const scope = requiredScope(args, "scope");
     const kinds = ctx.descriptor.scopeKinds;
     if (kinds.length > 0 && !kinds.includes(scope.kind)) {
-        throw new Error(`scope kind "${scope.kind}" is not declared`);
+        throw new AuthzError(`scope kind "${scope.kind}" is not declared`);
     }
     const bounds = normalizeBounds(args.bounds, ctx.keys);
     if (!bounds.ok)
-        throw new Error(bounds.error);
+        throw new AuthzError(bounds.error);
     const actor = ctx.options.actor ?? null;
     const carried = bounds.bounds.length > 0 ? { bounds: bounds.bounds } : {};
     await ctx.options.store.createGrant({
@@ -65,7 +74,7 @@ async function grant(args, ctx) {
 async function revoke(args, ctx) {
     const grantId = requiredString(args, "grantId");
     if (!await ctx.options.store.deleteGrant(grantId)) {
-        throw new Error(`grant "${grantId}" not found`);
+        throw new AuthzError(`grant "${grantId}" not found`);
     }
     recordAdminWrite(ctx.options.auditSink, ctx.options.actor ?? null, "authz.grant.revoke", `grant:${grantId}`, {}, AUDIT_SOURCE);
     return { ok: true, grantId };
@@ -145,13 +154,13 @@ const DEFINITIONS = {
             subjectId: STRING,
             action: STRING,
             before: { type: "string", description: "Return rows older than this timestamp." },
-            limit: { type: "number" },
+            limit: { type: "integer", minimum: AUDIT_LIMIT_MIN, maximum: AUDIT_LIMIT_MAX },
         }),
         handle: async (args, ctx) => {
             const limit = optionalNumber(args, "limit");
             return await ctx.options.store.listAudit({
                 ...pick(args, "subjectId", "action", "before"),
-                ...(limit === undefined ? {} : { limit }),
+                ...(limit === undefined ? {} : { limit: clampAuditLimit(limit) }),
             });
         },
     },
@@ -186,7 +195,7 @@ export function isKnownTool(name) {
 export async function runTool(name, args, ctx) {
     const def = DEFINITIONS[name];
     if (!def)
-        throw new Error(`Unknown tool: ${name}`);
+        throw new AuthzError(`Unknown tool: ${name}`);
     return await def.handle(toolArgs(args), ctx);
 }
 //# sourceMappingURL=tools.js.map

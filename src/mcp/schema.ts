@@ -149,7 +149,7 @@ export function boundsSchema(descriptor: AuthzDescriptor): JsonSchema {
 // engine from the real check inputs and would be overwritten, so offering them
 // here would invite a model to supply a value that is silently discarded.
 export function contextSchema(descriptor: AuthzDescriptor): JsonSchema | undefined {
-  const properties: Record<string, JsonSchema> = {};
+  const properties: Record<string, JsonSchema> = Object.create(null);
   for (const [key, spec] of Object.entries(descriptor.conditionKeys)) {
     if (spec.builtIn) continue;
     properties[key] = described(spec, contextValueSchema(spec.type));

@@ -1,4 +1,5 @@
 import { sql } from "kysely";
+import { AuthzError } from "../../model/errors.js";
 // The reference Kysely adapter: the ONLY code that reads/writes the authz_*
 // tables (the seam-first constraint — an alternative backend implements the
 // same ports without touching call sites). Policy CRUD + grant storage +
@@ -8,7 +9,7 @@ import { sql } from "kysely";
 // Thrown by updatePolicy/deletePolicy when the target is `system`: a curated,
 // immutable managed policy. Hosts map this to 400/403 — attach and
 // duplicate-to-customize stay open.
-export class SystemPolicyError extends Error {
+export class SystemPolicyError extends AuthzError {
 }
 const POLICY_COLUMNS = ["id", "name", "description", "statements", "system", "updated_at"];
 function iso(value) {

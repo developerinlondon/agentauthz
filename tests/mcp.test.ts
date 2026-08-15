@@ -6,6 +6,7 @@ import { makeAuthz } from "../src/core/authz.js";
 import { describeAuthz } from "../src/core/describe.js";
 import { createMcpServer, PROTOCOL_VERSION } from "../src/mcp/index.js";
 import type { JsonRpcResponse, McpTool, McpToolResult } from "../src/mcp/types.js";
+import { AuthzError } from "../src/model/errors.js";
 import type { GrantRecord, PolicyRecord } from "../src/model/grant.js";
 import type { Scope } from "../src/model/scope.js";
 import type { Subject } from "../src/model/subject.js";
@@ -146,6 +147,15 @@ function properties(tool: McpTool): Record<string, Record<string, unknown>> {
   return tool.inputSchema.properties as Record<string, Record<string, unknown>>;
 }
 
+// Valid enough to build a server, and fatal the moment a schema is generated
+// from it: the operators list a real descriptor always carries is missing.
+function brokenDescriptor() {
+  return {
+    ...describeAuthz({}),
+    conditionKeys: { "app:Bad": { type: "string" as const, operators: null as never } },
+  };
+}
+
 const grantArgs = { policyId: "p1", subject: agent, scope: space };
 const chain = [rootScope, space];
 
@@ -174,6 +184,13 @@ describe("the JSON-RPC surface", () => {
     expect((res!.result as { protocolVersion: string; }).protocolVersion).toBe(PROTOCOL_VERSION);
   });
 
+  // 2025-03-26's stdio transport requires JSON-RPC batching, which this server
+  // refuses — agreeing to that revision would be a promise it does not keep.
+  test("the revision whose transport demands batching is not agreed to", async () => {
+    const res = await request("initialize", { protocolVersion: "2025-03-26" });
+    expect((res!.result as { protocolVersion: string; }).protocolVersion).toBe(PROTOCOL_VERSION);
+  });
+
   test("notifications are acknowledged by silence, never by a reply", async () => {
     expect(await server.handleMessage({ jsonrpc: "2.0", method: "notifications/initialized" }))
       .toBeNull();
@@ -196,6 +213,30 @@ describe("the JSON-RPC surface", () => {
     expect((await server.handleMessage({ jsonrpc: "2.0", id: 1 }))!.error!.code).toBe(-32600);
     expect((await request("tools/nope"))!.error!.code).toBe(-32601);
     expect((await request("tools/call", { arguments: {} }))!.error!.code).toBe(-32602);
+  });
+
+  // MCP forbids a null id, and a success answer to one is shape-identical to
+  // this server's own protocol-error replies — the client cannot tell them
+  // apart, so the request is refused instead.
+  test("an id that is not a string or an integer is refused", async () => {
+    for (const id of [null, 1.5, { a: 1 }, ["x"]]) {
+      const res = await server.handleMessage({ jsonrpc: "2.0", id, method: "ping" });
+      expect(res!.error).toEqual({ code: -32600, message: "id must be a string or an integer" });
+    }
+    expect((await server.handleMessage({ jsonrpc: "2.0", id: "abc", method: "ping" }))!.result)
+      .toEqual({});
+  });
+
+  // A throw from below is answered, not swallowed: a client left waiting on a
+  // reply that never comes has no way to tell a hang from a crash.
+  test("a failure inside a route answers -32603 rather than escaping", async () => {
+    const broken = createMcpServer({
+      authz: makeAuthz({ grantStore: grants }),
+      store: adminStore(),
+      descriptor: brokenDescriptor(),
+    });
+    const res = await broken.handleMessage({ jsonrpc: "2.0", id: 1, method: "tools/list" });
+    expect(res!.error).toEqual({ code: -32603, message: "internal error" });
   });
 
   test("a response we are sent is not something we answer", async () => {
@@ -234,6 +275,21 @@ describe("the stdio transport", () => {
     const responses = await drive(['{ not json\n{"jsonrpc":"2.0","id":2,"method":"ping"}\n']);
     expect(responses[0]!.error!.code).toBe(-32700);
     expect(responses[1]!.id).toBe(2);
+  });
+
+  // A throw escaping to the for-await would leave the transport dead with no
+  // reply and no diagnosis — every later message silently unanswered.
+  test("a request that fails inside the server does not kill the session", async () => {
+    server = createMcpServer({
+      authz: makeAuthz({ grantStore: grants }),
+      store: adminStore(),
+      descriptor: brokenDescriptor(),
+    });
+    const responses = await drive([
+      '{"jsonrpc":"2.0","id":1,"method":"tools/list"}\n{"jsonrpc":"2.0","id":2,"method":"ping"}\n',
+    ]);
+    expect(responses[0]!.error!.code).toBe(-32603);
+    expect(responses.map((r) => r.id)).toEqual([1, 2]);
   });
 });
 
@@ -296,6 +352,13 @@ describe("tool schemas are generated from the descriptor", () => {
     // A string key admits the set operators; a number key never does.
     expect(byTitle.has("app:Region (set membership)")).toBe(true);
     expect(byTitle.has("app:MaxCost (set membership)")).toBe(false);
+    // On a key that has BOTH: the scalar branch requires `value`, so a set
+    // operator there would describe what the engine calls unreadable.
+    expect(scalarOps("app:Region")).toEqual(["StringEquals", "StringNotEquals", "StringLike"]);
+    const setBranch = byTitle.get("app:Region (set membership)")!;
+    expect((setBranch.properties as Record<string, { enum: string[]; }>).operator!.enum)
+      .toEqual(["StringIn", "StringNotIn", "StringLikeIn"]);
+    expect(setBranch.required).toEqual(["key", "operator", "values"]);
     expect(scalarOps("app:MaxCost")).toEqual(["NumericLessThan", "NumericGreaterThan"]);
     expect(scalarOps("app:NotAfter")).toEqual(["DateLessThan", "DateGreaterThan"]);
     // A numeric bound authored as a JSON number is legal; the engine normalizes
@@ -338,6 +401,21 @@ describe("tool schemas are generated from the descriptor", () => {
     expect(boundsOf(after)).toContain("app:Tier");
     expect(contextOf(before)).toEqual(["app:Region"]);
     expect(contextOf(after)).toEqual(["app:Region", "app:Tier"]);
+  });
+
+  // Assigning a key named "__proto__" into a plain object sets the prototype
+  // instead of adding a property, so a declared key would vanish between the
+  // descriptor and the schema without ever erroring.
+  test("a key named like a prototype slot still reaches the schema", () => {
+    const s = createMcpServer({
+      authz: makeAuthz({
+        grantStore: grants,
+        conditionKeys: JSON.parse('{"__proto__":{"type":"string"}}'),
+      }),
+      store: adminStore(),
+    });
+    const context = properties(toolNamed(s.listTools(), "authz_check")).context!.properties!;
+    expect(Object.getOwnPropertyNames(context)).toEqual(["__proto__"]);
   });
 
   test("a supplied descriptor overrides the engine's own", () => {
@@ -432,6 +510,58 @@ describe("the tools carry out real work", () => {
     expect(await probe("us-east")).toBe(false);
   });
 
+  // The reason this layer reads arguments field by field instead of spreading
+  // them into CheckOpts: bypass, silent and now are the ENGINE's knobs. A tool
+  // caller that could set bypass would turn every deny into an allow, and one
+  // that could set silent would act with no trace.
+  test("engine-only check options cannot be reached from tool arguments", async () => {
+    const probe = {
+      subjects: [agent],
+      action: "articles.publish",
+      resource: "article:42",
+      scopeChain: chain,
+    };
+    const plain = payload(await call("authz_check", probe)) as Record<string, unknown>;
+    audit = [];
+
+    const smuggled = payload(
+      await call("authz_check", {
+        ...probe,
+        bypass: true,
+        silent: true,
+        now: "2099-01-01T00:00:00.000Z",
+        source: "trusted-internal",
+        auditDetail: { forged: true },
+      }),
+    ) as Record<string, unknown>;
+
+    expect(smuggled).toEqual(plain);
+    expect(smuggled.decision).toBe("deny");
+    expect(smuggled.allowed).toBe(false);
+    expect(audit).toHaveLength(1);
+    expect(audit[0]).toMatchObject({ decision: "deny", source: "authz-mcp", detail: null });
+  });
+
+  test("every check is audited, not only the administrative writes", async () => {
+    await call("authz_check", {
+      subjects: [agent],
+      action: "articles.publish",
+      resource: "article:42",
+      scopeChain: chain,
+    });
+    expect(audit).toHaveLength(1);
+    expect(audit[0]).toMatchObject({
+      action: "articles.publish",
+      resource: "article:42",
+      decision: "deny",
+      source: "authz-mcp",
+    });
+    expect(audit[0]!.subject).toEqual(agent);
+
+    const queried = payload(await call("authz_audit_query", {})) as AdminAuditRecord[];
+    expect(queried.some((r) => r.decision === "deny")).toBe(true);
+  });
+
   test("a revoke removes the grant, and an unknown id says so", async () => {
     await call("authz_grant", grantArgs);
     expect((await call("authz_revoke", { grantId: "g1" })).isError).toBeUndefined();
@@ -492,10 +622,29 @@ describe("rejections reach the model in the engine's own words", () => {
     );
   });
 
-  test("a store rejection is passed through, not translated", async () => {
+  // A store's own Error was never written to be read by an agent: a driver
+  // message can carry a connection string, a table name, or a row's contents.
+  test("an arbitrary store failure is masked, not forwarded", async () => {
     const result = await call("authz_grant", { ...grantArgs, policyId: "p9" });
     expect(result.isError).toBe(true);
-    expect(result.content[0]!.text).toBe("unknown policy p9");
+    expect(result.content[0]!.text).toBe("internal error");
+    expect(result.content[0]!.text).not.toContain("p9");
+  });
+
+  // The other half of that split: a store that opts in by throwing AuthzError
+  // is stating its message is for the caller, and it crosses verbatim.
+  test("a store that speaks AuthzError is forwarded verbatim", async () => {
+    const refusing = createMcpServer({
+      authz: makeAuthz({ grantStore: grants, scopeKinds: ["root", "space"] }),
+      store: {
+        ...adminStore(),
+        createGrant: async () => {
+          throw new AuthzError("policy p1 is system-managed here");
+        },
+      },
+    });
+    const result = await refusing.callTool("authz_grant", grantArgs);
+    expect(result.content[0]!.text).toBe("policy p1 is system-managed here");
   });
 
   test("an undeclared scope kind is refused before the store is reached", async () => {

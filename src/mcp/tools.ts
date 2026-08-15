@@ -10,6 +10,7 @@ import type { CheckOpts } from "../core/authz.js";
 import { conditionKeysFromDescriptor } from "../core/describe.js";
 import type { ConditionKeys } from "../model/condition.js";
 import type { AuthzDescriptor } from "../model/descriptor.js";
+import { AuthzError } from "../model/errors.js";
 import {
   optionalContext,
   optionalNumber,
@@ -68,6 +69,16 @@ function object(properties: Record<string, JsonSchema>, required: string[] = [])
 const NO_ARGS: JsonSchema = object({});
 const STRING: JsonSchema = { type: "string" };
 
+// The pg backend clamps a listing to this range; a store that does not is held
+// to it here, so the same request cannot mean "one page" against one backend
+// and "the whole table" against another.
+const AUDIT_LIMIT_MIN = 1;
+const AUDIT_LIMIT_MAX = 200;
+
+function clampAuditLimit(limit: number): number {
+  return Math.min(Math.max(Math.trunc(limit), AUDIT_LIMIT_MIN), AUDIT_LIMIT_MAX);
+}
+
 async function check(args: Record<string, unknown>, ctx: ToolContext): Promise<unknown> {
   const opts: CheckOpts = { source: AUDIT_SOURCE };
   const scopeChain = optionalScopeChain(args, "scopeChain");
@@ -90,10 +101,10 @@ async function grant(args: Record<string, unknown>, ctx: ToolContext): Promise<u
   const scope = requiredScope(args, "scope");
   const kinds = ctx.descriptor.scopeKinds;
   if (kinds.length > 0 && !kinds.includes(scope.kind)) {
-    throw new Error(`scope kind "${scope.kind}" is not declared`);
+    throw new AuthzError(`scope kind "${scope.kind}" is not declared`);
   }
   const bounds = normalizeBounds(args.bounds, ctx.keys);
-  if (!bounds.ok) throw new Error(bounds.error);
+  if (!bounds.ok) throw new AuthzError(bounds.error);
   const actor = ctx.options.actor ?? null;
   const carried = bounds.bounds.length > 0 ? { bounds: bounds.bounds } : {};
 
@@ -118,7 +129,7 @@ async function grant(args: Record<string, unknown>, ctx: ToolContext): Promise<u
 async function revoke(args: Record<string, unknown>, ctx: ToolContext): Promise<unknown> {
   const grantId = requiredString(args, "grantId");
   if (!await ctx.options.store.deleteGrant(grantId)) {
-    throw new Error(`grant "${grantId}" not found`);
+    throw new AuthzError(`grant "${grantId}" not found`);
   }
   recordAdminWrite(
     ctx.options.auditSink,
@@ -212,13 +223,13 @@ const DEFINITIONS: Record<string, ToolDefinition> = {
         subjectId: STRING,
         action: STRING,
         before: { type: "string", description: "Return rows older than this timestamp." },
-        limit: { type: "number" },
+        limit: { type: "integer", minimum: AUDIT_LIMIT_MIN, maximum: AUDIT_LIMIT_MAX },
       }),
     handle: async (args, ctx) => {
       const limit = optionalNumber(args, "limit");
       return await ctx.options.store.listAudit({
         ...pick(args, "subjectId", "action", "before"),
-        ...(limit === undefined ? {} : { limit }),
+        ...(limit === undefined ? {} : { limit: clampAuditLimit(limit) }),
       });
     },
   },
@@ -260,6 +271,6 @@ export async function runTool(
   ctx: ToolContext,
 ): Promise<unknown> {
   const def = DEFINITIONS[name];
-  if (!def) throw new Error(`Unknown tool: ${name}`);
+  if (!def) throw new AuthzError(`Unknown tool: ${name}`);
   return await def.handle(toolArgs(args), ctx);
 }

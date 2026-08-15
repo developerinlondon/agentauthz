@@ -2,13 +2,15 @@
 // rather than taken as a dependency — this package has none, and an
 // authorization engine acquiring its first runtime dependency to speak a
 // framing protocol is a poor trade.
+import { AuthzError } from "../model/errors.js";
 import { isKnownTool, listTools, runTool, toolContext } from "./tools.js";
-// The revision this server implements. A client asking for another revision we
-// know is answered in ITS revision — the tools surface is identical across
-// these three — and anything else is answered in ours, which the spec leaves
-// the client to accept or close.
+// The revision this server implements. A client asking for the other revision
+// here is answered in ITS revision; anything else is answered in ours, which
+// the spec leaves the client to accept or close. 2025-03-26 is deliberately
+// absent: its stdio transport requires JSON-RPC batching, which this server
+// refuses, so agreeing to it would be a promise not kept.
 export const PROTOCOL_VERSION = "2025-06-18";
-const SUPPORTED_PROTOCOL_VERSIONS = ["2025-06-18", "2025-03-26", "2024-11-05"];
+const SUPPORTED_PROTOCOL_VERSIONS = ["2025-06-18", "2024-11-05"];
 const DEFAULT_SERVER_INFO = { name: "agentauthz", version: "0.5.0" };
 const INSTRUCTIONS = "Read the vocabulary with authz_describe, list attachable policies with authz_policies, then "
     + "grant with authz_grant and probe the result with authz_check. Bounds and context values are "
@@ -16,6 +18,9 @@ const INSTRUCTIONS = "Read the vocabulary with authz_describe, list attachable p
     + "rejection quotes the engine, so correct the named condition and retry.";
 function isRecord(value) {
     return typeof value === "object" && value !== null && !Array.isArray(value);
+}
+function isValidId(value) {
+    return typeof value === "string" || (typeof value === "number" && Number.isInteger(value));
 }
 function ok(id, result) {
     return { jsonrpc: "2.0", id, result };
@@ -26,11 +31,14 @@ function failure(id, code, message) {
 function textResult(value) {
     return { content: [{ type: "text", text: JSON.stringify(value, null, 2) }] };
 }
+// An AuthzError's message was written for the caller, so it crosses verbatim —
+// that is what lets a model correct a rejected bound without a human
+// translating. Anything else reached us from code that never agreed to be read
+// by an untrusted consumer: a driver's message can carry a connection string,
+// a table name, or the contents of a row, and the tool's caller is an agent.
 function errorText(error) {
-    // Verbatim: an engine or store rejection is the message a model needs to
-    // correct itself, and a paraphrase is a translation layer that can be wrong.
-    const message = error instanceof Error ? error.message : String(error);
-    return { content: [{ type: "text", text: message }], isError: true };
+    const text = error instanceof AuthzError ? error.message : "internal error";
+    return { content: [{ type: "text", text }], isError: true };
 }
 function negotiateVersion(params) {
     const requested = isRecord(params) ? params.protocolVersion : undefined;
@@ -91,12 +99,20 @@ export function createMcpServer(options) {
             return null;
         if (typeof message.method !== "string")
             return failure(null, -32600, "method must be a string");
-        // No id at all is a notification: acknowledged by doing the work, never by
-        // a reply — including an error reply for a method we do not know.
+        // A notification gets no reply, not even for an unknown method.
         if (message.id === undefined)
             return null;
+        // MCP forbids a null id; answering one is indistinguishable from the shape
+        // this file reports protocol errors with.
+        if (!isValidId(message.id))
+            return failure(null, -32600, "id must be a string or an integer");
         const id = message.id;
-        return await route(message.method, id, message.params);
+        try {
+            return await route(message.method, id, message.params);
+        }
+        catch {
+            return failure(id, -32603, "internal error");
+        }
     };
     const runStdio = async (streams = {}) => {
         const proc = hostProcess();
@@ -121,7 +137,15 @@ export function createMcpServer(options) {
                 write(`${JSON.stringify(failure(null, -32700, "parse error"))}\n`);
                 return;
             }
-            const response = await handleMessage(parsed);
+            // One bad line must never end the session: a throw escaping to the
+            // for-await leaves the transport dead with no reply and no diagnosis.
+            let response;
+            try {
+                response = await handleMessage(parsed);
+            }
+            catch {
+                response = failure(null, -32603, "internal error");
+            }
             if (response)
                 write(`${JSON.stringify(response)}\n`);
         };

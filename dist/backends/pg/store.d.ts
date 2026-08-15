@@ -1,11 +1,12 @@
 import { type Kysely } from "kysely";
+import { AuthzError } from "../../model/errors.js";
 import type { GrantBounds, GrantRecord, PolicyRecord, ResolvedGrant } from "../../model/grant.js";
 import type { Scope, ScopeChain } from "../../model/scope.js";
 import type { PolicyStatement } from "../../model/statement.js";
 import type { Subject } from "../../model/subject.js";
 import type { AuditEvent, GrantStore } from "../../ports/index.js";
 import type { PgAuthzConfig } from "./config.js";
-export declare class SystemPolicyError extends Error {
+export declare class SystemPolicyError extends AuthzError {
 }
 export interface AuditRecord {
     id: string;

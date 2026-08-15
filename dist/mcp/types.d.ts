@@ -1,4 +1,4 @@
-import type { AdminStore, SubjectLister } from "../admin/types.js";
+import type { AdminStore } from "../admin/types.js";
 import type { Authz } from "../core/authz.js";
 import type { AuthzDescriptor } from "../model/descriptor.js";
 import type { Subject } from "../model/subject.js";
@@ -8,7 +8,6 @@ export interface McpServerOptions {
     authz: Authz;
     store: AdminStore;
     descriptor?: AuthzDescriptor;
-    subjects?: SubjectLister;
     actor?: Subject | null;
     auditSink?: AuditSink;
     serverInfo?: {
