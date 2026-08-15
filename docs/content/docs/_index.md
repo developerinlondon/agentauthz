@@ -25,20 +25,7 @@ deployment.
 
 ## The shape of it
 
-```mermaid
-flowchart LR
-    subgraph host["Your application"]
-        R[HTTP routes] --> A
-        UI[Your admin UI] --> H
-    end
-    subgraph lib["@neutroncore/authz"]
-        A["Authz.check()"] --> E[pure evaluator]
-        H["admin handlers"] --> D["describe()"]
-        E --> P[(GrantStore port)]
-        H --> P
-    end
-    P --> PG[("authz_* tables<br/>in YOUR Postgres")]
-```
+<img src="/neutron-authz/images/architecture.svg" style="max-width:100%" alt="Architecture: your app calls check() and the admin handlers; both cross the ports seam; Postgres is the plugged-in reference backend and any conformant backend drops into the open socket" />
 
 The host keeps, permanently: authentication and subject resolution, the admin-bypass decision,
 HTTP routing, the action vocabulary, and what the admin UI looks like. The library owns the

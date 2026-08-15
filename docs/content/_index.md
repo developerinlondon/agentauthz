@@ -9,7 +9,7 @@ layout: hextra-home
 
 <div class="hx:mt-6 hx:mb-6">
 {{< hextra/hero-headline >}}
-  Authorization as data,&nbsp;<br class="hx:sm:block hx:hidden" />in your own Postgres
+  Authorization as data,&nbsp;<br class="hx:sm:block hx:hidden" />in your own database
 {{< /hextra/hero-headline >}}
 </div>
 

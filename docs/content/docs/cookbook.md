@@ -20,8 +20,8 @@ bun run server.ts     # → http://localhost:8787
 flowchart LR
     B[browser: ui.html] -->|GET /descriptor| S[server.ts]
     B -->|"grants · policies · audit"| S
-    S --> M["MemoryAdminStore<br/>(~100 lines = the whole port surface)"]
-    S --> A["Authz.check()<br/>/api/check probe"]
+    S --> M["MemoryAdminStore — (~100 lines = the whole port surface)"]
+    S --> A["Authz.check() — /api/check probe"]
 ```
 
 `server.ts` declares a five-action vocabulary with derivation

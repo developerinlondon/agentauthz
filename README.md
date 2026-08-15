@@ -1,7 +1,8 @@
 # @neutroncore/authz
 
 Embeddable TypeScript authorization engine: policy statements + grants-at-scope + typed ABAC
-conditions, deny-wins, asymmetric fail-closed. **Policies are rows in your own Postgres**, authored
+conditions, deny-wins, asymmetric fail-closed. **Policies are rows in your own database** — Postgres backend included, any conformant store
+drops in — authored
 at runtime — by an admin UI, or by an agent — not files compiled into a deployment.
 
 **Documentation: <https://developerinlondon.github.io/neutron-authz/>**
