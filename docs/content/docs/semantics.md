@@ -1,6 +1,7 @@
 ---
 title: Semantics
 weight: 4
+icon: book-open
 ---
 
 The contract, in five rules. Everything else in the library is machinery to enforce these.

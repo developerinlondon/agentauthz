@@ -1,6 +1,7 @@
 ---
 title: Admin surface
 weight: 7
+icon: server
 ---
 
 Every admin screen — a grants table, a policy browser, an audit view, a bounds form — is a pure

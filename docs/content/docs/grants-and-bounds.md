@@ -1,6 +1,7 @@
 ---
 title: Grants & bounds
 weight: 6
+icon: key
 ---
 
 ## Grants

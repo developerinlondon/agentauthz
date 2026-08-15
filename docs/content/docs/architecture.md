@@ -1,6 +1,7 @@
 ---
 title: Architecture
 weight: 2
+icon: cube
 ---
 
 ## Why the engine owns storage

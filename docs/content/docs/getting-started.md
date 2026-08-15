@@ -1,6 +1,7 @@
 ---
 title: Getting started
 weight: 1
+icon: play
 ---
 
 ## Install

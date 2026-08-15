@@ -1,6 +1,7 @@
 ---
 title: Storage & conformance
 weight: 10
+icon: database
 ---
 
 ## The pg backend
