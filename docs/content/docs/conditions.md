@@ -15,7 +15,7 @@ which the author meant.
 | `StringLike`                             | `value`  | string   | **exact, or one trailing `*`** — not a glob     |
 | `StringIn` / `StringNotIn`               | `values` | string   | membership; `StringNotIn` is the exact negation |
 | `StringLikeIn`                           | `values` | string   | membership across trailing-`*` prefixes         |
-| `NumericLessThan` / `NumericGreaterThan` | `value`  | number   | **the bound is a string**: `"5"`                |
+| `NumericLessThan` / `NumericGreaterThan` | `value`  | number   | authored as `5` or `"5"` — normalized on write  |
 | `DateLessThan` / `DateGreaterThan`       | `value`  | date     | value must carry `Z` or an explicit offset      |
 | `IpAddress` / `NotIpAddress`             | `value`  | ip       | CIDR membership, IPv4 and IPv6                  |
 
@@ -60,16 +60,21 @@ With a list on both sides — policy `values` and a multi-valued context key —
 An empty `values` list is rejected at write time and unmatchable at evaluation, so it can never read
 as a vacuous allow.
 
-## The two traps
+## The validator refuses what would silently mean nothing
 
-Both read as working policies and are not, so both are rejected on the write path:
+`StringLike` is deliberately not a regex and not SQL — patterns match exactly, or as a prefix
+with one trailing `*`. An author reaching for another engine's dialect writes something that
+*reads* as a policy and matches nothing, so the write path refuses it and names the fix:
 
-{{< callout type="error" >}}
-**`StringLike` is prefix-only.** `"infra|lite"` is a literal string that matches nothing —
-it is not a regex, not a glob. Use `StringIn` with a values list.
-{{< /callout >}}
+| You write | The validator answers |
+| --- | --- |
+| `StringLike "infra\|lite"` | `"\|" is not alternation here; use StringIn/StringLikeIn with a values list` |
+| `StringLike "infra%"` | `"%" is not a wildcard here; the only wildcard is a single trailing *` |
+| `NumericLessThan value: 5` (a JSON number) | accepted — normalized to `"5"` at write time |
+| `DateLessThan "2026-08-01T00:00:00"` | `has no timezone — a bare timestamp parses in the SERVER's local time` |
+| `IpAddress "10.0.0.7"` | `not a valid IPv4 or IPv6 CIDR (e.g. 10.0.0.0/8)` |
 
-{{< callout type="error" >}}
-**A numeric bound is a string.** `value: 5` is a type error that would evaluate as an
-unmatchable condition rather than a loud failure. Write `value: "5"`.
-{{< /callout >}}
+Every message is produced by `validateConditions` and returned verbatim through the admin
+routes, so a UI shows the author exactly what the engine will and won't do — a dead-on-arrival
+policy cannot be saved through any supported path. And should a malformed row reach storage
+some other way, evaluation still fails closed: the allow never fires, a deny stands.
