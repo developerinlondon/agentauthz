@@ -11,16 +11,16 @@ deployment.
 ## Where to start
 
 {{< cards >}}
-  {{< card link="getting-started" title="Getting started" subtitle="Install, declare a vocabulary, make your first check" >}}
-  {{< card link="architecture" title="Architecture" subtitle="The layers, the ports, and why the engine owns storage" >}}
-  {{< card link="comparison" title="Comparison" subtitle="What ships complete here vs Cedar, Zanzibar services, Casbin" >}}
-  {{< card link="semantics" title="Semantics" subtitle="Statements, deny-wins, scope chains, fail-closed conditions" >}}
-  {{< card link="conditions" title="Conditions" subtitle="The typed operator whitelist and its two traps" >}}
-  {{< card link="grants-and-bounds" title="Grants & bounds" subtitle="One curated policy, different limits per subject" >}}
-  {{< card link="admin-surface" title="Admin surface" subtitle="describe(), the descriptor document, and the HTTP handlers" >}}
-  {{< card link="building-a-ui" title="Building a UI" subtitle="Generate every admin screen from the descriptor" >}}
-  {{< card link="cookbook" title="Cookbook" subtitle="A runnable host with a working admin UI, recipe by recipe" >}}
-  {{< card link="storage-and-conformance" title="Storage & conformance" subtitle="The pg backend, migrations, and the backend-flip contract" >}}
+  {{< card link="getting-started" icon="play" title="Getting started" subtitle="Install, declare a vocabulary, make your first check" >}}
+  {{< card link="architecture" icon="cube" title="Architecture" subtitle="The layers, the ports, and why the engine owns storage" >}}
+  {{< card link="comparison" icon="scale" title="Comparison" subtitle="What ships complete here vs Cedar, Zanzibar services, Casbin" >}}
+  {{< card link="semantics" icon="book-open" title="Semantics" subtitle="Statements, deny-wins, scope chains, fail-closed conditions" >}}
+  {{< card link="conditions" icon="adjustments" title="Conditions" subtitle="The typed operator whitelist and its two traps" >}}
+  {{< card link="grants-and-bounds" icon="key" title="Grants & bounds" subtitle="One curated policy, different limits per subject" >}}
+  {{< card link="admin-surface" icon="server" title="Admin surface" subtitle="describe(), the descriptor document, and the HTTP handlers" >}}
+  {{< card link="building-a-ui" icon="template" title="Building a UI" subtitle="Generate every admin screen from the descriptor" >}}
+  {{< card link="cookbook" icon="beaker" title="Cookbook" subtitle="A runnable host with a working admin UI, recipe by recipe" >}}
+  {{< card link="storage-and-conformance" icon="database" title="Storage & conformance" subtitle="The pg backend, migrations, and the backend-flip contract" >}}
 {{< /cards >}}
 
 ## The shape of it
