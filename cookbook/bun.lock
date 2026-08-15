@@ -5,7 +5,7 @@
     "": {
       "name": "authz-example",
       "dependencies": {
-        "@neutroncore/authz": "^0.4.1",
+        "agentauthz": "^0.5.0",
       },
       "devDependencies": {
         "@types/bun": "^1.3.14",
@@ -14,11 +14,11 @@
     },
   },
   "packages": {
-    "@neutroncore/authz": ["@neutroncore/authz@0.4.1", "", { "peerDependencies": { "kysely": ">=0.28" }, "optionalPeers": ["kysely"] }, "sha512-c3RVqkB4Oig4vi13JGNxCyv9vH1P8wMnjh598ES/yi7pxehND9sHHfwRG+NZNl8Xy0pJ9nacJ22pwtPvmH6odQ=="],
-
     "@types/bun": ["@types/bun@1.3.14", "", { "dependencies": { "bun-types": "1.3.14" } }, "sha512-h1hFqFVcvAvD9j9K7ZW7vd82aSA+rTdznZa+5bwvCwqSB1jmmfLcbIWhOLx1/+boy/xmjgCs/OMUL8hRJSmnPw=="],
 
     "@types/node": ["@types/node@26.2.0", "", { "dependencies": { "undici-types": "~8.3.0" } }, "sha512-5IviulTZeRNp2vAJ514cc/HUlY5nZ9fCbq9DMyC52BrhFZACo3nI0R7qBxhQmo/d27NFe96ur/b7Wwxklda+kg=="],
+
+    "agentauthz": ["agentauthz@0.5.0", "", { "peerDependencies": { "kysely": ">=0.28" }, "optionalPeers": ["kysely"] }, "sha512-tam5oOX7MVL/4xOLezULBngwRK4tarPhYHq1zkOEDLR5iwQlJuESWXOu4ibMYWmWsEcw+bUTeGklCx3+nNSn+Q=="],
 
     "bun-types": ["bun-types@1.3.14", "", { "dependencies": { "@types/node": "*" } }, "sha512-4N0ig0fEomHt5R0KCFWjovxow98rIoRwKolrYdCcknNwMekCXRnWEUvgu5soYV8QXtVsrUD8B95MBOZGPvr6KQ=="],
 
