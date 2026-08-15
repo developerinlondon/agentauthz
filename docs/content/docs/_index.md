@@ -13,6 +13,7 @@ deployment.
 {{< cards >}}
   {{< card link="getting-started" title="Getting started" subtitle="Install, declare a vocabulary, make your first check" >}}
   {{< card link="architecture" title="Architecture" subtitle="The layers, the ports, and why the engine owns storage" >}}
+  {{< card link="comparison" title="Comparison" subtitle="What ships complete here vs Cedar, Zanzibar services, Casbin" >}}
   {{< card link="semantics" title="Semantics" subtitle="Statements, deny-wins, scope chains, fail-closed conditions" >}}
   {{< card link="conditions" title="Conditions" subtitle="The typed operator whitelist and its two traps" >}}
   {{< card link="grants-and-bounds" title="Grants & bounds" subtitle="One curated policy, different limits per subject" >}}
