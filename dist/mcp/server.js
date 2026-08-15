@@ -11,7 +11,7 @@ import { isKnownTool, listTools, runTool, toolContext } from "./tools.js";
 // refuses, so agreeing to it would be a promise not kept.
 export const PROTOCOL_VERSION = "2025-06-18";
 const SUPPORTED_PROTOCOL_VERSIONS = ["2025-06-18", "2024-11-05"];
-const DEFAULT_SERVER_INFO = { name: "agentauthz", version: "0.5.0" };
+const DEFAULT_SERVER_INFO = { name: "agentauthz", version: "0.6.0" };
 const INSTRUCTIONS = "Read the vocabulary with authz_describe, list attachable policies with authz_policies, then "
     + "grant with authz_grant and probe the result with authz_check. Bounds and context values are "
     + "constrained by the tool schemas, which are generated from this host's own declarations; a "
