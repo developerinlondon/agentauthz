@@ -38,12 +38,7 @@ await store.createGrant({
 });
 ```
 
-```mermaid
-flowchart LR
-    P["policy: content-author — (curated once)"] --> GA["grant → alice — bounds: Region = eu-west"]
-    P --> GB["grant → bob — bounds: Region = us-east"]
-    P --> GC["grant → ci-bot — no bounds"]
-```
+<img src="/neutron-authz/images/fig-grant-bounds.svg" style="max-width:100%" alt="One curated policy granted three times: alice bounded to eu-west, bob to us-east, ci-bot unbounded" />
 
 Two rules make bounds safe:
 

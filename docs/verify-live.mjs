@@ -23,10 +23,14 @@ while (Date.now() < deadline) {
     page.on("response", onResponse);
     await page.goto(base + path, { waitUntil: "networkidle" });
     await page.waitForTimeout(1000);
-    const raw = await page.evaluate(() =>
-      [...document.querySelectorAll("pre.mermaid")].filter((el) => !el.querySelector("svg")).length
+    // Diagrams are build-time SVGs by policy: any client-rendered mermaid
+    // block appearing at all is a regression, not a rendering race.
+    const mermaid = await page.evaluate(() => document.querySelectorAll("pre.mermaid").length);
+    if (mermaid > 0) bad.push(`${mermaid} client-rendered mermaid block(s) — diagrams must be static SVG`);
+    const brokenImgs = await page.evaluate(() =>
+      [...document.querySelectorAll("img")].filter((i) => i.complete && i.naturalWidth === 0).length
     );
-    if (raw > 0) bad.push(`${raw} raw mermaid block(s)`);
+    if (brokenImgs > 0) bad.push(`${brokenImgs} broken image(s)`);
     if (sha) {
       const footer = await page.evaluate(() => document.querySelector("footer")?.textContent ?? "");
       if (!footer.includes(sha)) bad.push(`footer sha != ${sha}`);

@@ -16,13 +16,7 @@ bun run server.ts     # → http://localhost:8787
 
 ![the example admin UI, generated from the descriptor](/images/example-ui.png)
 
-```mermaid
-flowchart LR
-    B[browser: ui.html] -->|GET /descriptor| S[server.ts]
-    B -->|"grants · policies · audit"| S
-    S --> M["MemoryAdminStore — (~100 lines = the whole port surface)"]
-    S --> A["Authz.check() — /api/check probe"]
-```
+<img src="/neutron-authz/images/fig-cookbook.svg" style="max-width:100%" alt="The cookbook host: the browser UI reads the descriptor and the admin routes from server.ts, which owns the in-memory store and a check probe" />
 
 `server.ts` declares a five-action vocabulary with derivation
 (`articles.publish → articles.write → articles.read`), two condition keys, two seeded curated
@@ -35,6 +29,36 @@ nothing else changes.
 renders from the descriptor, exactly as [Building a UI](../building-a-ui) describes — the
 version gate, the generated bounds form, the coverage panel, set-operator switching, and the
 engine's validation messages surfaced verbatim.
+
+## The in-memory store
+
+[Storage & conformance](../storage-and-conformance#bringing-your-own-storage) points here for a
+reason: `MemoryAdminStore` in
+[`cookbook/server.ts`](https://github.com/developerinlondon/neutron-authz/blob/main/cookbook/server.ts)
+is a complete non-Postgres backend — `AdminStore`, `GrantStore` and `AuditSink` in about a
+hundred lines. The shape of it:
+
+```ts
+class MemoryAdminStore implements AdminStore {
+  // the admin surface
+  async listPolicies(): Promise<PolicyRecord[]> { … }
+  async listGrants(filter): Promise<GrantRecord[]> { … }
+  async createGrant(input): Promise<void> { … }        // replaces bounds on re-grant
+  async deleteGrant(id): Promise<boolean> { … }
+  async listAudit(opts): Promise<AdminAuditRecord[]> { … }
+
+  // the evaluation seam (GrantSource): EXACTLY the grants whose
+  // subject AND scope match — the engine unions what it is given
+  async grantsFor(subjects, chain): Promise<ResolvedGrant[]> { … }
+
+  // the audit sink — fire-and-forget from the engine's point of view
+  record(event: AuditEvent): void { … }
+}
+```
+
+Swap it for `PgAuthzStore` — or your own — and nothing else in the host changes. To prove a
+real replacement, run the conformance fixtures through it as
+[Storage & conformance](../storage-and-conformance#conformance) shows.
 
 ## What to try
 
