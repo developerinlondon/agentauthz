@@ -19,6 +19,7 @@ layout: hextra-home
 {{< /hextra/hero-subtitle >}}
 </div>
 
+<div class="hx:mt-4 hx:w-full">
 {{< cards >}}
   {{< card link="docs/getting-started" title="Getting started" subtitle="Install, declare a vocabulary, make your first check" >}}
   {{< card link="docs/architecture" title="Architecture" subtitle="The layers, the ports, and why the engine owns storage" >}}
@@ -31,3 +32,4 @@ layout: hextra-home
   {{< card link="docs/cookbook" title="Cookbook" subtitle="A runnable host with a working admin UI, recipe by recipe" >}}
   {{< card link="docs/storage-and-conformance" title="Storage & conformance" subtitle="The pg backend, migrations, and the backend-flip contract" >}}
 {{< /cards >}}
+</div>
