@@ -120,13 +120,13 @@ bun test                # pg suite needs DATABASE_URL (scratch db created/droppe
 bunx tsc --noEmit
 ```
 
-Installing straight from git also works (`bun add github:developerinlondon/neutron-authz#v0.4.1`) —
+Installing straight from git also works (`bun add github:developerinlondon/neutron-authz#v0.4.2`) —
 `dist/` is committed and CI refuses a stale one.
 
 ## Releasing
 
 Bump `version` in `package.json`, merge, push the matching tag
-(`git tag v0.4.1 && git push origin v0.4.1`). The release workflow typechecks, runs the whole suite
+(`git tag v0.4.2 && git push origin v0.4.2`). The release workflow typechecks, runs the whole suite
 including the storage-backed conformance runner against Postgres, refuses a tag that disagrees with
 `package.json`, and publishes via npm trusted publishing — no token exists anywhere.
 

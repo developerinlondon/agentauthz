@@ -369,3 +369,73 @@ describe("write-time validation (validateConditions)", () => {
     if (v.ok) expect(v.conditions[0]!.value).toBe("mixed@example.com");
   });
 });
+
+
+describe("validateConditions — authoring forgiveness and dialect mistakes", () => {
+  const NUM_KEYS = resolveConditionKeys({ "app:MaxCpu": { type: "number" } });
+
+  test("a numeric bound authored as a JSON number is normalized, not bounced", () => {
+    const v = validateConditions(
+      [{ operator: "NumericLessThan", key: "app:MaxCpu", value: 5 }],
+      NUM_KEYS,
+    );
+    expect(v.ok).toBe(true);
+    if (v.ok) expect(v.conditions[0]!.value).toBe("5");
+  });
+
+  test("a non-finite numeric bound is still refused", () => {
+    for (const value of [Infinity, NaN]) {
+      const v = validateConditions(
+        [{ operator: "NumericLessThan", key: "app:MaxCpu", value }],
+        NUM_KEYS,
+      );
+      expect(v.ok).toBe(false);
+    }
+  });
+
+  test("a number on a STRING operator is not coerced — the type rule stands", () => {
+    const v = validateConditions([{ operator: "StringEquals", key: "app:Kind", value: 5 }], KEYS);
+    expect(v.ok).toBe(false);
+  });
+
+  test("regex alternation in StringLike is refused, naming the fix", () => {
+    const v = validateConditions(
+      [{ operator: "StringLike", key: "app:Kind", value: "infra|lite" }],
+      KEYS,
+    );
+    expect(v.ok).toBe(false);
+    if (!v.ok) expect(v.error).toContain("StringIn");
+  });
+
+  test("SQL-LIKE % in StringLike is refused, naming the real wildcard", () => {
+    const v = validateConditions(
+      [{ operator: "StringLike", key: "app:Kind", value: "infra%" }],
+      KEYS,
+    );
+    expect(v.ok).toBe(false);
+    if (!v.ok) expect(v.error).toContain("trailing *");
+  });
+
+  test("the same dialect check covers every StringLikeIn pattern", () => {
+    const v = validateConditions(
+      [{ operator: "StringLikeIn", key: "app:Kind", values: ["ok*", "a|b"] }],
+      KEYS,
+    );
+    expect(v.ok).toBe(false);
+  });
+
+  test("a literal pipe stored in a raw row still evaluates literally (fail closed, unchanged)", () => {
+    const verdict = evalConditions(
+      [{ operator: "StringLike", key: "app:Kind", value: "infra|lite" }],
+      makeConditionContext({ "app:Kind": "infra|lite" }),
+      KEYS,
+    );
+    expect(verdict).toBe("match");
+    const miss = evalConditions(
+      [{ operator: "StringLike", key: "app:Kind", value: "infra|lite" }],
+      makeConditionContext({ "app:Kind": "infra" }),
+      KEYS,
+    );
+    expect(miss).toBe("no-match");
+  });
+});

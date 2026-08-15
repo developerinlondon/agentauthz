@@ -103,6 +103,24 @@ function isValidLikePattern(pattern: string): boolean {
   return star === -1 || star === pattern.length - 1;
 }
 
+// Write-path only (evaluation stays literal for at-rest rows): a pattern in a
+// regex or SQL-LIKE dialect matches literally here, which reads as a policy
+// and does nothing — refuse it with the fix in the message.
+function likePatternMistake(pattern: string): string | null {
+  if (pattern.includes("|")) {
+    return `like-pattern "${pattern}" — "|" is not alternation here; use StringIn/StringLikeIn `
+      + "with a values list";
+  }
+  if (pattern.includes("%")) {
+    return `like-pattern "${pattern}" — "%" is not a wildcard here; the only wildcard is a `
+      + "single trailing *";
+  }
+  if (!isValidLikePattern(pattern)) {
+    return `like-pattern "${pattern}" — only a single trailing * is allowed`;
+  }
+  return null;
+}
+
 // A DateLessThan/DateGreaterThan value must name its own timezone (Z or an
 // explicit ±HH:MM/±HHMM offset). A bare "2026-08-01T00:00:00" parses in the
 // SERVER's local timezone (Date.parse), so the exact same policy would mean a
@@ -421,12 +439,9 @@ export function validateConditions(input: unknown, keys: ConditionKeys): Conditi
         };
       }
       if (op === "StringLikeIn") {
-        const bad = (c.values as string[]).find((v) => !isValidLikePattern(v));
-        if (bad !== undefined) {
-          return {
-            ok: false,
-            error: `condition ${i}: like-pattern "${bad}" — only a single trailing * is allowed`,
-          };
+        for (const v of c.values as string[]) {
+          const mistake = likePatternMistake(v);
+          if (mistake) return { ok: false, error: `condition ${i}: ${mistake}` };
         }
       }
       const storedValues = spec.lowercase
@@ -438,7 +453,14 @@ export function validateConditions(input: unknown, keys: ConditionKeys): Conditi
     if (c.values !== undefined) {
       return { ok: false, error: `condition ${i}: ${op} takes value, not values` };
     }
-    if (typeof c.value !== "string" || c.value.length === 0) {
+    // A numeric bound authored as a JSON number is unambiguous — normalize it
+    // rather than bounce the author to quoting it.
+    const value = typeof c.value === "number"
+        && Number.isFinite(c.value)
+        && (op === "NumericLessThan" || op === "NumericGreaterThan")
+      ? String(c.value)
+      : c.value;
+    if (typeof value !== "string" || value.length === 0) {
       return { ok: false, error: `condition ${i}: value must be a non-empty string` };
     }
     if (OPERATOR_KEY_TYPE[op] !== spec.type) {
@@ -449,32 +471,30 @@ export function validateConditions(input: unknown, keys: ConditionKeys): Conditi
     }
     if (
       (op === "NumericLessThan" || op === "NumericGreaterThan")
-      && (c.value.trim() === "" || Number.isNaN(Number(c.value)))
+      && (value.trim() === "" || Number.isNaN(Number(value)))
     ) {
-      return { ok: false, error: `condition ${i}: "${c.value}" is not a number` };
+      return { ok: false, error: `condition ${i}: "${value}" is not a number` };
     }
     if ((op === "DateLessThan" || op === "DateGreaterThan")) {
-      if (Number.isNaN(Date.parse(c.value))) {
-        return { ok: false, error: `condition ${i}: "${c.value}" is not a parseable date` };
+      if (Number.isNaN(Date.parse(value))) {
+        return { ok: false, error: `condition ${i}: "${value}" is not a parseable date` };
       }
-      if (!hasExplicitTimezone(c.value)) {
+      if (!hasExplicitTimezone(value)) {
         return {
           ok: false,
-          error: `condition ${i}: "${c.value}" has no timezone — use Z or an explicit ±HH:MM `
+          error: `condition ${i}: "${value}" has no timezone — use Z or an explicit ±HH:MM `
             + "offset (a bare timestamp parses in the SERVER's local time)",
         };
       }
     }
-    if (op === "StringLike" && !isValidLikePattern(c.value)) {
-      return {
-        ok: false,
-        error: `condition ${i}: like-pattern "${c.value}" — only a single trailing * is allowed`,
-      };
+    if (op === "StringLike") {
+      const mistake = likePatternMistake(value);
+      if (mistake) return { ok: false, error: `condition ${i}: ${mistake}` };
     }
-    if ((op === "IpAddress" || op === "NotIpAddress") && !parseCidr(c.value)) {
+    if ((op === "IpAddress" || op === "NotIpAddress") && !parseCidr(value)) {
       return {
         ok: false,
-        error: `condition ${i}: "${c.value}" is not a valid IPv4 or IPv6 CIDR (e.g. 10.0.0.0/8, `
+        error: `condition ${i}: "${value}" is not a valid IPv4 or IPv6 CIDR (e.g. 10.0.0.0/8, `
           + "2001:db8::/32)",
       };
     }
@@ -484,7 +504,7 @@ export function validateConditions(input: unknown, keys: ConditionKeys): Conditi
     // lowercase-compares such keys directly, so pre-existing/raw rows stay
     // safe even without this normalization — belt-and-suspenders, not the
     // only guarantee).
-    const storedValue = spec.lowercase ? c.value.toLowerCase() : c.value;
+    const storedValue = spec.lowercase ? value.toLowerCase() : value;
     out.push({ operator: c.operator as string, key: c.key, value: storedValue });
   }
   return { ok: true, conditions: out };
