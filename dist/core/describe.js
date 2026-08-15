@@ -46,4 +46,15 @@ export function describeAuthz(input = {}) {
         setOperators: [...SET_OPERATORS],
     };
 }
+// The projection back: a descriptor already carries each key's type and
+// lowercase flag, which is exactly ConditionKeys. An administrative surface
+// validating a bound therefore uses the same vocabulary its consumer was told
+// about, and the two cannot disagree about what is legal.
+export function conditionKeysFromDescriptor(descriptor) {
+    const keys = {};
+    for (const [key, spec] of Object.entries(descriptor.conditionKeys)) {
+        keys[key] = { type: spec.type, ...(spec.lowercase ? { lowercase: true } : {}) };
+    }
+    return resolveConditionKeys(keys);
+}
 //# sourceMappingURL=describe.js.map
