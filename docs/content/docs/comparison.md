@@ -1,6 +1,6 @@
 ---
 title: Comparison
-weight: 10
+weight: 3
 ---
 
 The comparison that matters is not evaluator against evaluator — it is **how much of the

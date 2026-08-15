@@ -15,16 +15,19 @@ layout: hextra-home
 
 <div class="hx:mb-12">
 {{< hextra/hero-subtitle >}}
-  Policy statements, grants-at-scope, typed ABAC conditions.&nbsp;<br class="hx:sm:block hx:hidden" />Deny wins. Everything fails closed. No extra service.
+  Policy statements · grants at scope · typed ABAC conditions.&nbsp;<br class="hx:sm:block hx:hidden" />Deny wins, everything fails closed, and there is no extra service to run.
 {{< /hextra/hero-subtitle >}}
 </div>
 
-<div class="hx:mb-6">
-{{< hextra/hero-button text="Get started" link="docs/getting-started" >}}
-</div>
-
-{{< hextra/feature-grid >}}
-  {{< hextra/feature-card title="Policies are rows, not files" subtitle="Authored at runtime — by an admin UI or an agent — validated on write, audited on every decision. Storage ships with the engine." >}}
-  {{< hextra/feature-card title="Fail-closed, asymmetrically" subtitle="An allow needs a definitive match. A deny stands even when its condition cannot be evaluated. Both directions fail toward less access." >}}
-  {{< hextra/feature-card title="An admin surface, served as data" subtitle="describe() projects your vocabulary into a stable JSON document; framework-free handlers serve it. One descriptor drives any UI." >}}
-{{< /hextra/feature-grid >}}
+{{< cards >}}
+  {{< card link="docs/getting-started" title="Getting started" subtitle="Install, declare a vocabulary, make your first check" >}}
+  {{< card link="docs/architecture" title="Architecture" subtitle="The layers, the ports, and why the engine owns storage" >}}
+  {{< card link="docs/comparison" title="Comparison" subtitle="What ships complete here vs Cedar, Zanzibar services, Casbin" >}}
+  {{< card link="docs/semantics" title="Semantics" subtitle="Statements, deny-wins, scope chains, fail-closed conditions" >}}
+  {{< card link="docs/conditions" title="Conditions" subtitle="The typed operator whitelist, and what the validator refuses" >}}
+  {{< card link="docs/grants-and-bounds" title="Grants & bounds" subtitle="One curated policy, different limits per subject" >}}
+  {{< card link="docs/admin-surface" title="Admin surface" subtitle="describe(), the descriptor document, and the HTTP handlers" >}}
+  {{< card link="docs/building-a-ui" title="Building a UI" subtitle="Generate every admin screen from the descriptor" >}}
+  {{< card link="docs/example" title="Runnable example" subtitle="A complete host with a working admin UI, in the repo" >}}
+  {{< card link="docs/storage-and-conformance" title="Storage & conformance" subtitle="The pg backend, migrations, and the backend-flip contract" >}}
+{{< /cards >}}
