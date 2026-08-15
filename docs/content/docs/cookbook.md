@@ -6,7 +6,7 @@ aliases: [/docs/example/]
 ---
 
 The repository ships a complete host in
-[`cookbook/`](https://github.com/developerinlondon/neutron-authz/tree/main/cookbook) — two files,
+[`cookbook/`](https://github.com/developerinlondon/agentauthz/tree/main/cookbook) — two files,
 in memory, nothing to configure:
 
 ```sh
@@ -17,7 +17,7 @@ bun run server.ts     # → http://localhost:8787
 
 ![the example admin UI, generated from the descriptor](/images/example-ui.png)
 
-<img src="/neutron-authz/images/fig-cookbook.svg" style="max-width:100%" alt="The cookbook host: the browser UI reads the descriptor and the admin routes from server.ts, which owns the in-memory store and a check probe" />
+<img src="/agentauthz/images/fig-cookbook.svg" style="max-width:100%" alt="The cookbook host: the browser UI reads the descriptor and the admin routes from server.ts, which owns the in-memory store and a check probe" />
 
 `server.ts` declares a five-action vocabulary with derivation
 (`articles.publish → articles.write → articles.read`), two condition keys, two seeded curated
@@ -35,7 +35,7 @@ engine's validation messages surfaced verbatim.
 
 [Storage & conformance](../storage-and-conformance#bringing-your-own-storage) points here for a
 reason: `MemoryAdminStore` in
-[`cookbook/server.ts`](https://github.com/developerinlondon/neutron-authz/blob/main/cookbook/server.ts)
+[`cookbook/server.ts`](https://github.com/developerinlondon/agentauthz/blob/main/cookbook/server.ts)
 is a complete non-Postgres backend — `AdminStore`, `GrantStore` and `AuditSink` in about a
 hundred lines. The shape of it:
 

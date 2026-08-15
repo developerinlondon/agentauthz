@@ -16,7 +16,7 @@ owns three tables in **your** database — never a separate authz DB:
 | `authz_audit`    | one row per decision: subject, action, resource, verdict, source |
 
 ```ts
-import { PgAuthzStore } from "@neutroncore/authz/backends/pg";
+import { PgAuthzStore } from "agentauthz/backends/pg";
 
 const store = new PgAuthzStore(db, {
   scopeKinds: ["root", "project"],
@@ -35,7 +35,7 @@ They are shape-only on purpose, so the operator whitelist can grow without a mig
 ## Migrations
 
 ```ts
-import { applyAuthzMigrations, AuthzMigrationProvider } from "@neutroncore/authz/backends/pg";
+import { applyAuthzMigrations, AuthzMigrationProvider } from "agentauthz/backends/pg";
 
 // standalone, via Kysely's Migrator:
 new Migrator({ db, provider: new AuthzMigrationProvider(config) });
@@ -83,7 +83,7 @@ deny-wins, scope inheritance, resource matching, every condition semantic, asymm
 malformed input, role synthesis, action derivation, set membership, and grant bounds.
 
 ```ts
-import { composedEngineImpl, runConformance } from "@neutroncore/authz/conformance";
+import { composedEngineImpl, runConformance } from "agentauthz/conformance";
 
 const results = await runConformance(composedEngineImpl);
 // every result.pass must be true

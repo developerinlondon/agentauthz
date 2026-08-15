@@ -7,8 +7,8 @@ icon: play
 ## Install
 
 ```sh
-npm install @neutroncore/authz        # or: bun add / pnpm add / yarn add
-npm install @neutroncore/authz kysely # kysely only if you use the Postgres backend
+npm install agentauthz        # or: bun add / pnpm add / yarn add
+npm install agentauthz kysely # kysely only if you use the Postgres backend
 ```
 
 Compiled ESM with type declarations — plain Node ≥ 20 consumes it, no bundler required.
@@ -18,7 +18,7 @@ Compiled ESM with type declarations — plain Node ≥ 20 consumes it, no bundle
 The engine accepts **only** actions you declare. There is no action wildcard.
 
 ```ts
-import { actionRegistryFromCatalogue } from "@neutroncore/authz/ports";
+import { actionRegistryFromCatalogue } from "agentauthz/ports";
 
 const actions = actionRegistryFromCatalogue([
   { action: "docs.read", title: "Read documents" },
@@ -33,8 +33,8 @@ Derivation is registry data: a policy author cannot invent it.
 ## Wire the engine
 
 ```ts
-import { PgAuthzStore } from "@neutroncore/authz/backends/pg";
-import { makeAuthz } from "@neutroncore/authz/core";
+import { PgAuthzStore } from "agentauthz/backends/pg";
+import { makeAuthz } from "agentauthz/core";
 
 const store = new PgAuthzStore(db, {
   scopeKinds: ["root", "project"],

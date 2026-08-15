@@ -3,7 +3,7 @@
 // commit this run deployed — the stale-CDN-edge case a human otherwise finds.
 import { chromium } from "playwright";
 
-const base = process.env.SITE_URL ?? "https://developerinlondon.github.io/neutron-authz/";
+const base = process.env.SITE_URL ?? "https://developerinlondon.github.io/agentauthz/";
 const sha = (process.env.EXPECT_SHA ?? "").slice(0, 8);
 const pages = ["", "docs/", "docs/getting-started/", "docs/architecture/", "docs/comparison/",
   "docs/semantics/", "docs/conditions/", "docs/grants-and-bounds/", "docs/admin-surface/",

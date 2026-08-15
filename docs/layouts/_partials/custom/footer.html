@@ -1,8 +1,8 @@
 {{- $version := getenv "HUGO_LIBVERSION" | default "dev" -}}
 {{- $sha := getenv "HUGO_LIBSHA" -}}
 <div class="hx:mt-2 hx:text-xs hx:text-gray-500 hx:dark:text-gray-500">
-  @neutroncore/authz v{{ $version }}
+  agentauthz v{{ $version }}
   {{- if $sha }} ·
-    <a class="hx:underline" href="https://github.com/developerinlondon/neutron-authz/commit/{{ $sha }}">{{ substr $sha 0 8 }}</a>
+    <a class="hx:underline" href="https://github.com/developerinlondon/agentauthz/commit/{{ $sha }}">{{ substr $sha 0 8 }}</a>
   {{- end }}
 </div>

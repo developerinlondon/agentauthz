@@ -1,4 +1,4 @@
-module github.com/developerinlondon/neutron-authz/docs
+module github.com/developerinlondon/agentauthz/docs
 
 go 1.26
 

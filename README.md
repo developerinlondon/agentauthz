@@ -1,15 +1,15 @@
-# @neutroncore/authz
+# agentauthz
 
 Embeddable TypeScript authorization engine: policy statements + grants-at-scope + typed ABAC
 conditions, deny-wins, asymmetric fail-closed. **Policies are rows in your own database** — Postgres backend included, any conformant store
 drops in — authored
 at runtime — by an admin UI, or by an agent — not files compiled into a deployment.
 
-**Documentation: <https://developerinlondon.github.io/neutron-authz/>**
+**Documentation: <https://developerinlondon.github.io/agentauthz/>**
 
 ```sh
-npm install @neutroncore/authz        # or: bun add / pnpm add / yarn add
-npm install @neutroncore/authz kysely # kysely only for the shipped Postgres backend
+npm install agentauthz        # or: bun add / pnpm add / yarn add
+npm install agentauthz kysely # kysely only for the shipped Postgres backend
 ```
 
 Compiled ESM with type declarations — plain Node ≥ 20, no bundler. Zero runtime dependencies.
@@ -17,9 +17,9 @@ Compiled ESM with type declarations — plain Node ≥ 20, no bundler. Zero runt
 ## Sixty seconds
 
 ```ts
-import { PgAuthzStore } from "@neutroncore/authz/backends/pg";
-import { makeAuthz } from "@neutroncore/authz/core";
-import { actionRegistryFromCatalogue } from "@neutroncore/authz/ports";
+import { PgAuthzStore } from "agentauthz/backends/pg";
+import { makeAuthz } from "agentauthz/core";
+import { actionRegistryFromCatalogue } from "agentauthz/ports";
 
 const store = new PgAuthzStore(db, {
   scopeKinds: ["root", "project"],
@@ -47,18 +47,18 @@ The engine serves its whole vocabulary as a stable JSON document (`describe()`),
 `(Request) => Response` admin routes over it. Every screen below is generated from that document —
 declare a new condition key server-side and a new form field appears with **no frontend change**:
 
-[![the example admin UI: grants with bounds, a generated bounds form, the coverage panel, a live check, the audit trail](https://developerinlondon.github.io/neutron-authz/images/example-ui.png)](cookbook/)
+[![the example admin UI: grants with bounds, a generated bounds form, the coverage panel, a live check, the audit trail](https://developerinlondon.github.io/agentauthz/images/example-ui.png)](cookbook/)
 
 That page is [`cookbook/ui.html`](cookbook/) — one static file, no framework, no host knowledge. Run
 it: `cd cookbook && bun install && bun run server.ts`.
 
 ## Architecture
 
-<img src="https://developerinlondon.github.io/neutron-authz/images/architecture.svg" alt="Architecture: your app calls check() and the admin handlers; both cross the ports seam; Postgres is the plugged-in reference backend and any conformant backend drops into the open socket" />
+<img src="https://developerinlondon.github.io/agentauthz/images/architecture.svg" alt="Architecture: your app calls check() and the admin handlers; both cross the ports seam; Postgres is the plugged-in reference backend and any conformant backend drops into the open socket" />
 
 The engine is a pure core behind ports. The shipped Postgres backend is the reference implementation
 — **any storage that passes the
-[conformance fixtures](https://developerinlondon.github.io/neutron-authz/docs/storage-and-conformance/)
+[conformance fixtures](https://developerinlondon.github.io/agentauthz/docs/storage-and-conformance/)
 is decision-identical and drops in behind the same seam**, with zero call-site churn. The host keeps
 authentication, subject resolution, HTTP routing, the vocabulary, and what the admin UI looks like.
 
@@ -68,7 +68,7 @@ Authorization-when-policies-are-data has five parts: deciding, storing, validati
 and administering. This library ships all five, in your process. The usual alternatives ship
 one.
 
-|                                                | @neutroncore/authz                                                           | Cedar                      | OpenFGA / SpiceDB / Keto        | Casbin                    |
+|                                                | agentauthz                                                           | Cedar                      | OpenFGA / SpiceDB / Keto        | Casbin                    |
 | ---------------------------------------------- | ---------------------------------------------------------------------------- | -------------------------- | ------------------------------- | ------------------------- |
 | Decide + store + validate + audit + administer | **all five, out of the box**                                                 | evaluator only             | check service; the rest varies  | evaluator + thin adapters |
 | Extra infrastructure                           | **none** — in-process                                                        | none (WASM from JS)        | a stateful service to run       | none                      |
@@ -85,20 +85,20 @@ hurt. Zanzibar services (OpenFGA, SpiceDB, Ory Keto) answer graph questions ("li
 of relationships — a reverse-index query shape this library deliberately doesn't do. For the
 question *may this subject do this action on this resource, right now* — with the policies
 themselves written and administered at runtime — this is the complete package.
-[Full comparison →](https://developerinlondon.github.io/neutron-authz/docs/comparison/)
+[Full comparison →](https://developerinlondon.github.io/agentauthz/docs/comparison/)
 
 ## Concepts in one line each
 
 | Concept           | In short                                                                                       | Docs                                                                                                     |
 | ----------------- | ---------------------------------------------------------------------------------------------- | -------------------------------------------------------------------------------------------------------- |
-| Statements        | `{effect, actions, resources, conditions?}` — actions from a closed registry, never wildcarded | [Semantics](https://developerinlondon.github.io/neutron-authz/docs/semantics/)                           |
-| Scope chains      | host-resolved, root-first; deny anywhere beats allow anywhere; malformed ⇒ deny                | [Semantics](https://developerinlondon.github.io/neutron-authz/docs/semantics/)                           |
-| Conditions        | typed operator whitelist, tri-state, asymmetric fail-closed — no expression language           | [Conditions](https://developerinlondon.github.io/neutron-authz/docs/conditions/)                         |
-| Action derivation | a statement naming a parent covers its declared, enumerable family — allow and deny alike      | [Semantics](https://developerinlondon.github.io/neutron-authz/docs/semantics/)                           |
-| Grant bounds      | conditions on the grant: one curated policy, different limits per subject; narrows allow only  | [Grants & bounds](https://developerinlondon.github.io/neutron-authz/docs/grants-and-bounds/)             |
-| Role synthesis    | app-owned role rows become grants at check time — one storage, no dual-write                   | [Architecture](https://developerinlondon.github.io/neutron-authz/docs/architecture/)                     |
-| Descriptor        | the vocabulary as versioned JSON; any UI on any runtime renders from it                        | [Admin surface](https://developerinlondon.github.io/neutron-authz/docs/admin-surface/)                   |
-| Conformance       | golden fixtures any alternative backend must decide identically — the swap-proof               | [Storage & conformance](https://developerinlondon.github.io/neutron-authz/docs/storage-and-conformance/) |
+| Statements        | `{effect, actions, resources, conditions?}` — actions from a closed registry, never wildcarded | [Semantics](https://developerinlondon.github.io/agentauthz/docs/semantics/)                           |
+| Scope chains      | host-resolved, root-first; deny anywhere beats allow anywhere; malformed ⇒ deny                | [Semantics](https://developerinlondon.github.io/agentauthz/docs/semantics/)                           |
+| Conditions        | typed operator whitelist, tri-state, asymmetric fail-closed — no expression language           | [Conditions](https://developerinlondon.github.io/agentauthz/docs/conditions/)                         |
+| Action derivation | a statement naming a parent covers its declared, enumerable family — allow and deny alike      | [Semantics](https://developerinlondon.github.io/agentauthz/docs/semantics/)                           |
+| Grant bounds      | conditions on the grant: one curated policy, different limits per subject; narrows allow only  | [Grants & bounds](https://developerinlondon.github.io/agentauthz/docs/grants-and-bounds/)             |
+| Role synthesis    | app-owned role rows become grants at check time — one storage, no dual-write                   | [Architecture](https://developerinlondon.github.io/agentauthz/docs/architecture/)                     |
+| Descriptor        | the vocabulary as versioned JSON; any UI on any runtime renders from it                        | [Admin surface](https://developerinlondon.github.io/agentauthz/docs/admin-surface/)                   |
+| Conformance       | golden fixtures any alternative backend must decide identically — the swap-proof               | [Storage & conformance](https://developerinlondon.github.io/agentauthz/docs/storage-and-conformance/) |
 
 ## Development
 
@@ -108,7 +108,7 @@ bun test                # pg suite needs DATABASE_URL (scratch db created/droppe
 bunx tsc --noEmit
 ```
 
-Installing straight from git also works (`bun add github:developerinlondon/neutron-authz#v0.4.2`) —
+Installing straight from git also works (`bun add github:developerinlondon/agentauthz#v0.5.0`) —
 `dist/` is committed and CI refuses a stale one.
 
 ## Releasing

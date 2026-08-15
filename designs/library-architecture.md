@@ -1,6 +1,6 @@
-# neutron-authz — embeddable TypeScript authorization engine
+# agentauthz — embeddable TypeScript authorization engine
 
-**Version**: 1.0 · **Status**: Approved 2026-07-15 · **First clients**: neutron core, jeebon
+**Version**: 1.1 · **Status**: Approved 2026-07-15 · **First clients**: neutron core, jeebon
 
 Extraction of neutron core's proven authz seam (`apps/api/src/authz/`, plans
 [015](https://gitlab.com/bizfoundry/core/neutron/-/tree/main/plans/015-agent-admin-governance) /
@@ -17,7 +17,7 @@ flowchart LR
     admin["admin UI / API / agent drafting<br/>lockout floor · admin bypass · gate"]
     appdata[("app tables<br/>participants.role / circle_member")]
   end
-  subgraph lib["neutron-authz"]
+  subgraph lib["agentauthz"]
     core["core evaluator<br/>statements · scope chain · conditions · deny-wins"]
     ports["ports"]
     pg["backends/pg<br/>authz_policies · authz_grants · authz_audit"]
@@ -31,7 +31,7 @@ flowchart LR
 ```
 
 ```text
-neutron-authz/
+agentauthz/
 ├── model/        statement, grant, condition, subject shapes — THE SPEC
 ├── core/         pure evaluator (zero deps, no I/O)
 ├── conformance/  golden fixtures: every semantic as data-driven tests
@@ -69,7 +69,7 @@ lockout floor, HTTP routes, admin UI, tool vocabulary/discovery, graph-reachabil
 | Decision              | Choice                                                                                                                                  |
 | --------------------- | --------------------------------------------------------------------------------------------------------------------------------------- |
 | Language / toolchain  | TypeScript 7 (Go-native tsc, GA 2026-07-08), Bun runtime, `bun test`                                                                    |
-| Distribution          | npm package `@bizfoundry/neutron-authz` via GitLab package registry                                                                     |
+| Distribution          | npm package `agentauthz` on npmjs.org                                                                     |
 | Storage               | Reference PG adapter, prefixed `authz_*` tables, migrations applied into the **host's** DB — never a separate authz DB (jeebon ADR 005) |
 | Back-compat           | NONE — neutron renames its live tables to `authz_*` and squashes its migration files in the flip MR (active development, both projects) |
 | Evaluation placement  | In-process (plan 015: no sidecar on the request/turn/tool-call path)                                                                    |

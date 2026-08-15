@@ -4,7 +4,7 @@ cascade:
   type: docs
 ---
 
-`@neutroncore/authz` is an embeddable TypeScript authorization engine. Policies are **rows in your
+`agentauthz` is an embeddable TypeScript authorization engine. Policies are **rows in your
 own database**, written at runtime through an API or an admin UI, not files compiled into a
 deployment.
 
@@ -25,7 +25,7 @@ deployment.
 
 ## The shape of it
 
-<img src="/neutron-authz/images/architecture.svg" style="max-width:100%" alt="Architecture: your app calls check() and the admin handlers; both cross the ports seam; Postgres is the plugged-in reference backend and any conformant backend drops into the open socket" />
+<img src="/agentauthz/images/architecture.svg" style="max-width:100%" alt="Architecture: your app calls check() and the admin handlers; both cross the ports seam; Postgres is the plugged-in reference backend and any conformant backend drops into the open socket" />
 
 The host keeps, permanently: authentication and subject resolution, the admin-bypass decision,
 HTTP routing, the action vocabulary, and what the admin UI looks like. The library owns the

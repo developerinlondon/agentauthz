@@ -24,4 +24,4 @@ Things to try in the browser:
   **no change to `ui.html`** (that is the reuse test the descriptor exists to pass)
 
 The full walk-through lives in the docs:
-<https://developerinlondon.github.io/neutron-authz/docs/building-a-ui/>
+<https://developerinlondon.github.io/agentauthz/docs/building-a-ui/>

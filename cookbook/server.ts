@@ -3,10 +3,10 @@
 //
 //   bun run server.ts     →  http://localhost:8787
 
-import type { AdminAuditRecord, AdminStore } from "@neutroncore/authz/admin";
-import { createAdminHandler } from "@neutroncore/authz/admin";
-import { describeAuthz, makeAuthz, validateStatements } from "@neutroncore/authz/core";
-import { resolveConditionKeys } from "@neutroncore/authz/core";
+import type { AdminAuditRecord, AdminStore } from "agentauthz/admin";
+import { createAdminHandler } from "agentauthz/admin";
+import { describeAuthz, makeAuthz, validateStatements } from "agentauthz/core";
+import { resolveConditionKeys } from "agentauthz/core";
 import type {
   GrantBounds,
   GrantRecord,
@@ -16,9 +16,9 @@ import type {
   Scope,
   ScopeChain,
   Subject,
-} from "@neutroncore/authz/model";
-import { actionRegistryFromCatalogue } from "@neutroncore/authz/ports";
-import type { AuditEvent } from "@neutroncore/authz/ports";
+} from "agentauthz/model";
+import { actionRegistryFromCatalogue } from "agentauthz/ports";
+import type { AuditEvent } from "agentauthz/ports";
 
 const ui = await Bun.file(new URL("./ui.html", import.meta.url)).text();
 

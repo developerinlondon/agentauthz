@@ -1,10 +1,10 @@
 ---
-title: "@neutroncore/authz"
+title: "agentauthz"
 layout: hextra-home
 ---
 
-{{< hextra/hero-badge link="https://www.npmjs.com/package/@neutroncore/authz" >}}
-  npm install @neutroncore/authz
+{{< hextra/hero-badge link="https://www.npmjs.com/package/agentauthz" >}}
+  npm install agentauthz
 {{< /hextra/hero-badge >}}
 
 <div class="hx:mt-6 hx:mb-6">

@@ -39,7 +39,7 @@ await store.createGrant({
 });
 ```
 
-<img src="/neutron-authz/images/fig-grant-bounds.svg" style="max-width:100%" alt="One curated policy granted three times: alice bounded to eu-west, bob to us-east, ci-bot unbounded" />
+<img src="/agentauthz/images/fig-grant-bounds.svg" style="max-width:100%" alt="One curated policy granted three times: alice bounded to eu-west, bob to us-east, ci-bot unbounded" />
 
 Two rules make bounds safe:
 
