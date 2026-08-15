@@ -23,7 +23,7 @@ import type {
 export const PROTOCOL_VERSION = "2025-06-18";
 const SUPPORTED_PROTOCOL_VERSIONS = ["2025-06-18", "2024-11-05"];
 
-const DEFAULT_SERVER_INFO = { name: "agentauthz", version: "0.5.0" };
+const DEFAULT_SERVER_INFO = { name: "agentauthz", version: "0.6.0" };
 
 const INSTRUCTIONS =
   "Read the vocabulary with authz_describe, list attachable policies with authz_policies, then "

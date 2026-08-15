@@ -1,6 +1,6 @@
 {
   "name": "agentauthz",
-  "version": "0.5.0",
+  "version": "0.6.0",
   "description": "Agent-native authorization engine for TypeScript: policy statements, grants-at-scope with typed bounds, ABAC conditions, deny-wins, asymmetric fail-closed. Policies live as rows in your own database — Postgres backend included, any conformant store drops in.",
   "license": "Apache-2.0",
   "author": "Nayeem Syed",
