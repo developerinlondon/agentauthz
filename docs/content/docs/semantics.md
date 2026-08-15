@@ -19,7 +19,7 @@ A statement is `{effect, actions, resources, conditions?}`:
 A grant is _(policy, subject `{kind,id}`, scope `{kind,id}`)_. A check evaluates against an ordered,
 **host-resolved** scope chain, root first:
 
-<img src="/neutron-authz/images/fig-scope-chain.svg" style="max-width:100%" alt="Scope chain: a root grant is inherited everywhere, a project grant only in its subtree, a leaf grant exactly at its leaf" />
+<img src="/agentauthz/images/fig-scope-chain.svg" style="max-width:100%" alt="Scope chain: a root grant is inherited everywhere, a project grant only in its subtree, a leaf grant exactly at its leaf" />
 
 Every grant at any chain scope applies. Inheritance can only ever **add** statements to consider — a
 leaf grant never leaks upward or into a sibling, because a sibling's chain never contains that leaf.

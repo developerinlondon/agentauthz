@@ -14,7 +14,7 @@ runtime, renders from that.
 ```ts
 const descriptor = authz.describe();
 // or standalone, without an engine:
-import { describeAuthz } from "@neutroncore/authz/core";
+import { describeAuthz } from "agentauthz/core";
 const descriptor = describeAuthz({ actionRegistry, conditionKeys, scopeKinds });
 ```
 
@@ -71,7 +71,7 @@ Plain `(Request) => Promise<Response>` over Web-standard types — the same func
 Node, Deno and Workers with no framework adapter:
 
 ```ts
-import { createAdminHandler } from "@neutroncore/authz/admin";
+import { createAdminHandler } from "agentauthz/admin";
 
 const handler = createAdminHandler({
   descriptor: authz.describe(),

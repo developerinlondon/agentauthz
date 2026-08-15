@@ -18,7 +18,7 @@ no cache-invalidation webhook, no fail-open-when-the-PDP-is-down question.
 
 ## The layers
 
-<img src="/neutron-authz/images/architecture.svg" style="max-width:100%" alt="Architecture: your app calls check() and the admin handlers; both cross the ports seam; Postgres is the plugged-in reference backend and any conformant backend drops into the open socket" />
+<img src="/agentauthz/images/architecture.svg" style="max-width:100%" alt="Architecture: your app calls check() and the admin handlers; both cross the ports seam; Postgres is the plugged-in reference backend and any conformant backend drops into the open socket" />
 
 | Layer          | Depends on         | Job                                            |
 | -------------- | ------------------ | ---------------------------------------------- |
@@ -36,7 +36,7 @@ no call site reads grant storage directly. That is what makes the storage backen
 zero call-site churn: an alternative backend implements `GrantSource`, passes the
 [conformance suite](../storage-and-conformance#conformance), and the config flips.
 
-<img src="/neutron-authz/images/fig-check-flow.svg" style="max-width:100%" alt="A check: validate the scope chain, gather grants from the store and synthesizers, decide deny-wins, audit, answer" />
+<img src="/agentauthz/images/fig-check-flow.svg" style="max-width:100%" alt="A check: validate the scope chain, gather grants from the store and synthesizers, decide deny-wins, audit, answer" />
 
 **Role synthesis** deserves a note: app-owned role rows (a membership table, a device link) become
 grants _at check time_ via `ScopeRoleSynthesizer` — one storage, no dual-write. A synthesized grant

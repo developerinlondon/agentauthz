@@ -14,7 +14,7 @@ This page is the recipe. The [cookbook](../cookbook) implements all of it in one
 
 Everything renders from `GET /descriptor`. Nothing about your host is hard-coded:
 
-<img src="/neutron-authz/images/fig-descriptor-ui.svg" style="max-width:100%" alt="The descriptor generates the bounds form, the coverage panel and the pickers — a new condition key means a new field with no frontend change" />
+<img src="/agentauthz/images/fig-descriptor-ui.svg" style="max-width:100%" alt="The descriptor generates the bounds form, the coverage panel and the pickers — a new condition key means a new field with no frontend change" />
 
 ## Version gate first
 

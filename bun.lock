@@ -3,7 +3,7 @@
   "configVersion": 1,
   "workspaces": {
     "": {
-      "name": "@bizfoundry/neutron-authz",
+      "name": "agentauthz",
       "devDependencies": {
         "@types/bun": "^1.3.14",
         "@types/pg": "^8.20.0",

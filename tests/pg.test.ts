@@ -22,7 +22,7 @@ import type { AuditEvent } from "../src/ports/index.js";
 // contract, the audit sink, and — the point of the whole exercise — the FULL
 // conformance suite decided through PgAuthzStore instead of the memory store.
 
-const SCRATCH_DB = "neutron_authz_pg_test";
+const SCRATCH_DB = "agentauthz_pg_test";
 const baseUrl = process.env.AUTHZ_TEST_DATABASE_URL ?? process.env.DATABASE_URL;
 if (!baseUrl) {
   throw new Error(

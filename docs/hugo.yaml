@@ -1,5 +1,5 @@
-baseURL: https://developerinlondon.github.io/neutron-authz/
-title: "@neutroncore/authz"
+baseURL: https://developerinlondon.github.io/agentauthz/
+title: "agentauthz"
 locale: en-us
 enableInlineShortcodes: true
 
@@ -30,7 +30,7 @@ menu:
         type: search
     - name: GitHub
       weight: 4
-      url: "https://github.com/developerinlondon/neutron-authz"
+      url: "https://github.com/developerinlondon/agentauthz"
       params:
         icon: github
     - name: Theme
@@ -48,7 +48,7 @@ params:
     displayPoweredBy: false
   editURL:
     enable: true
-    base: "https://github.com/developerinlondon/neutron-authz/edit/main/docs/content"
+    base: "https://github.com/developerinlondon/agentauthz/edit/main/docs/content"
   page:
     width: normal
   theme:

@@ -10,7 +10,7 @@ agents rather than compiled from files. That problem has five parts: deciding, s
 validating, auditing, and administering. This library ships all five, in your process, against
 your own database.
 
-|  | @neutroncore/authz | Cedar | OpenFGA / SpiceDB / Ory Keto | Casbin |
+|  | agentauthz | Cedar | OpenFGA / SpiceDB / Ory Keto | Casbin |
 | --- | --- | --- | --- | --- |
 | Complete out of the box — decide + store + validate + audit + administer | **all five** | evaluator only | check service; the rest varies | evaluator + thin adapters |
 | Extra infrastructure to run | **none** — in-process | none (WASM from JS) | a stateful service to deploy, scale and keep up | none |
