@@ -40,9 +40,9 @@ await store.createGrant({
 
 ```mermaid
 flowchart LR
-    P["policy: content-author<br/>(curated once)"] --> GA["grant → alice<br/>bounds: Region = eu-west"]
-    P --> GB["grant → bob<br/>bounds: Region = us-east"]
-    P --> GC["grant → ci-bot<br/>no bounds"]
+    P["policy: content-author — (curated once)"] --> GA["grant → alice — bounds: Region = eu-west"]
+    P --> GB["grant → bob — bounds: Region = us-east"]
+    P --> GC["grant → ci-bot — no bounds"]
 ```
 
 Two rules make bounds safe:

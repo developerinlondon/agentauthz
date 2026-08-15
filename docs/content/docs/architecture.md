@@ -11,7 +11,8 @@ git. It is wrong when policies are **data** — written by admins through a UI, 
 — because then you need a schema, migrations, write-time validation, and an audit trail, and you end
 up building all four anyway.
 
-This library ships both halves, in-process, against your own Postgres. No sidecar, no network hop,
+This library ships both halves, in-process, against your own database — Postgres as the
+reference backend, anything passing the conformance fixtures behind the same port. No sidecar, no network hop,
 no cache-invalidation webhook, no fail-open-when-the-PDP-is-down question.
 
 ## The layers
