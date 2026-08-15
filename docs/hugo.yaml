@@ -21,8 +21,8 @@ menu:
     - name: Documentation
       pageRef: /docs
       weight: 1
-    - name: Example
-      pageRef: /docs/example
+    - name: Cookbook
+      pageRef: /docs/cookbook
       weight: 2
     - name: Search
       weight: 3
@@ -43,6 +43,7 @@ params:
     displayTitle: true
     displayLogo: false
   footer:
+    enable: true
     displayCopyright: false
     displayPoweredBy: false
   editURL:

@@ -36,7 +36,11 @@ jobs:
 
       - name: Build
         working-directory: docs
-        run: hugo --minify --gc
+        env:
+          HUGO_LIBSHA: ${{ github.sha }}
+        run: |
+          export HUGO_LIBVERSION="$(node -p 'require("../package.json").version')"
+          hugo --minify --gc
 
       - uses: actions/upload-pages-artifact@v4
         with:

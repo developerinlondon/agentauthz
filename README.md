@@ -46,27 +46,14 @@ The engine serves its whole vocabulary as a stable JSON document (`describe()`),
 `(Request) => Response` admin routes over it. Every screen below is generated from that document —
 declare a new condition key server-side and a new form field appears with **no frontend change**:
 
-[![the example admin UI: grants with bounds, a generated bounds form, the coverage panel, a live check, the audit trail](https://developerinlondon.github.io/neutron-authz/images/example-ui.png)](example/)
+[![the example admin UI: grants with bounds, a generated bounds form, the coverage panel, a live check, the audit trail](https://developerinlondon.github.io/neutron-authz/images/example-ui.png)](cookbook/)
 
-That page is [`example/ui.html`](example/) — one static file, no framework, no host knowledge. Run
-it: `cd example && bun install && bun run server.ts`.
+That page is [`cookbook/ui.html`](cookbook/) — one static file, no framework, no host knowledge. Run
+it: `cd cookbook && bun install && bun run server.ts`.
 
 ## Architecture
 
-```mermaid
-flowchart LR
-    subgraph host["your application"]
-        R["routes"] --> C
-        UI["your admin UI"] --> H
-    end
-    subgraph lib["@neutroncore/authz — in-process"]
-        C["Authz.check()"] --> E["pure evaluator<br/>deny-wins · fail-closed"]
-        H["admin handlers"] --> D["describe()"]
-        E --> P[("GrantStore port")]
-        H --> P
-    end
-    P --> PG[("authz_* tables<br/>in YOUR Postgres")]
-```
+<img src="https://developerinlondon.github.io/neutron-authz/images/architecture.svg" alt="Architecture: your app calls check() and the admin handlers; both cross the ports seam; Postgres is the plugged-in reference backend and any conformant backend drops into the open socket" />
 
 The engine is a pure core behind ports. The shipped Postgres backend is the reference implementation
 — **any storage that passes the
@@ -80,7 +67,7 @@ Authorization-when-policies-are-data has five parts: deciding, storing, validati
 and administering. This library ships all five, in your process. The usual alternatives ship
 one.
 
-|                                                | @neutroncore/authz                                                           | Cedar                      | OpenFGA / SpiceDB               | Casbin                    |
+|                                                | @neutroncore/authz                                                           | Cedar                      | OpenFGA / SpiceDB / Keto        | Casbin                    |
 | ---------------------------------------------- | ---------------------------------------------------------------------------- | -------------------------- | ------------------------------- | ------------------------- |
 | Decide + store + validate + audit + administer | **all five, out of the box**                                                 | evaluator only             | check service; the rest varies  | evaluator + thin adapters |
 | Extra infrastructure                           | **none** — in-process                                                        | none (WASM from JS)        | a stateful service to run       | none                      |
@@ -93,7 +80,7 @@ one.
 
 Different products solve different problems: Cedar is a formally verified evaluator for
 policies engineers review in git — there, CI is the admin surface and the missing ring doesn't
-hurt. Zanzibar services answer graph questions ("list everything alice can see") over millions
+hurt. Zanzibar services (OpenFGA, SpiceDB, Ory Keto) answer graph questions ("list everything alice can see") over millions
 of relationships — a reverse-index query shape this library deliberately doesn't do. For the
 question *may this subject do this action on this resource, right now* — with the policies
 themselves written and administered at runtime — this is the complete package.

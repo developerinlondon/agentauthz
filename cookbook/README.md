@@ -1,4 +1,4 @@
-# Example host
+# Cookbook: a complete host
 
 A complete host in two files, in memory, nothing to configure:
 

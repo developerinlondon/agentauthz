@@ -49,6 +49,32 @@ the failure surfaces at runtime as a missing column, not at deploy. `applyAuthzM
 `revertAuthzMigrations` exist so that cannot happen. Each migration is idempotent, so a squashed
 baseline on fresh databases and a delta on live ones converge. {{< /callout >}}
 
+## Bringing your own storage
+
+The engine never touches a database directly — it calls the `GrantStore` port. A backend is
+five methods over whatever you have (SQLite, Dynamo, MySQL, memory, an HTTP service):
+
+```ts
+interface GrantStore {
+  grantsFor(subjects: Subject[], scopeChain: ScopeChain): Promise<ResolvedGrant[]>;
+  createGrant(input: { policyId; subject; scope; bounds?; createdBy }): Promise<void>;
+  deleteGrant(id: string): Promise<boolean>;
+  deleteGrantsForSubject(subject: Subject): Promise<number>;
+  deleteGrantsForPolicy(policyId: string): Promise<number>;
+}
+```
+
+`grantsFor` is the only one evaluation calls: return exactly the grants whose subject AND scope
+match — over-returning is a correctness bug, not a widening, but the contract is precise and
+the fixtures below check it for you. Wire it in and nothing else changes:
+
+```ts
+const authz = makeAuthz({ grantStore: myStore, /* …identical otherwise */ });
+```
+
+The [cookbook](../cookbook)'s in-memory store is a complete working backend in about a hundred
+lines — the honest measure of the port's size.
+
 ## Conformance
 
 `conformance/cases/*.json` is the backend contract: language-neutral golden fixtures covering
