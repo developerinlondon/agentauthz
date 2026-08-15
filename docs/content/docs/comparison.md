@@ -9,7 +9,7 @@ agents rather than compiled from files. That problem has five parts: deciding, s
 validating, auditing, and administering. This library ships all five, in your process, against
 your own database.
 
-|  | @neutroncore/authz | Cedar | OpenFGA / SpiceDB | Casbin |
+|  | @neutroncore/authz | Cedar | OpenFGA / SpiceDB / Ory Keto | Casbin |
 | --- | --- | --- | --- | --- |
 | Complete out of the box — decide + store + validate + audit + administer | **all five** | evaluator only | check service; the rest varies | evaluator + thin adapters |
 | Extra infrastructure to run | **none** — in-process | none (WASM from JS) | a stateful service to deploy, scale and keep up | none |
@@ -28,6 +28,14 @@ access. That asymmetry is the design center, and it is pinned by
 [conformance fixtures](../storage-and-conformance#conformance) any alternative backend must
 reproduce.
 
+## Any authentication
+
+The engine is deliberately blind to authentication: it never sees a credential, a token, or a
+session. The host resolves the caller — through any OIDC provider (Ory Kratos/Hydra, EntraID,
+Auth0, Keycloak, …), its own native users, API keys, or mTLS — into explicit `{kind, id}`
+subjects *before* the check. Swapping identity providers never touches a policy, a grant, or a
+call site, and machine principals are the same shape as human ones.
+
 ## Different problems
 
 Two things in that table's neighborhood are different products, not missing features:
@@ -37,7 +45,7 @@ Two things in that table's neighborhood are different products, not missing feat
   analysis tooling are the point — and storage, audit and administration being your problem is
   fine, because your CI is the admin surface.
 - **Graph questions at scale** — "list everything alice can see" over millions of relationships —
-  are what Zanzibar-shaped services (OpenFGA, SpiceDB) exist to answer. That is a reverse-index
+  are what Zanzibar-shaped services (OpenFGA, SpiceDB, Ory Keto) exist to answer. That is a reverse-index
   query shape, not a check, and it justifies running the extra service when you have it.
 
 This library asks a narrower question — *may this subject do this action on this resource,

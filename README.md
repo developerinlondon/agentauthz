@@ -80,7 +80,7 @@ Authorization-when-policies-are-data has five parts: deciding, storing, validati
 and administering. This library ships all five, in your process. The usual alternatives ship
 one.
 
-|                                                | @neutroncore/authz                                                           | Cedar                      | OpenFGA / SpiceDB               | Casbin                    |
+|                                                | @neutroncore/authz                                                           | Cedar                      | OpenFGA / SpiceDB / Keto        | Casbin                    |
 | ---------------------------------------------- | ---------------------------------------------------------------------------- | -------------------------- | ------------------------------- | ------------------------- |
 | Decide + store + validate + audit + administer | **all five, out of the box**                                                 | evaluator only             | check service; the rest varies  | evaluator + thin adapters |
 | Extra infrastructure                           | **none** — in-process                                                        | none (WASM from JS)        | a stateful service to run       | none                      |
@@ -93,7 +93,7 @@ one.
 
 Different products solve different problems: Cedar is a formally verified evaluator for
 policies engineers review in git — there, CI is the admin surface and the missing ring doesn't
-hurt. Zanzibar services answer graph questions ("list everything alice can see") over millions
+hurt. Zanzibar services (OpenFGA, SpiceDB, Ory Keto) answer graph questions ("list everything alice can see") over millions
 of relationships — a reverse-index query shape this library deliberately doesn't do. For the
 question *may this subject do this action on this resource, right now* — with the policies
 themselves written and administered at runtime — this is the complete package.
