@@ -7,7 +7,7 @@ The library deliberately ships **no UI**: two integrations proved that every hos
 look, while none of them wants to re-derive the logic. The division of labour that survived: **the
 engine supplies what the vocabulary means; the host supplies how it looks.**
 
-This page is the recipe. The [runnable example](../example) implements all of it in one file.
+This page is the recipe. The [cookbook](../cookbook) implements all of it in one file.
 
 ## The generative loop
 

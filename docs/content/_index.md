@@ -28,6 +28,6 @@ layout: hextra-home
   {{< card link="docs/grants-and-bounds" title="Grants & bounds" subtitle="One curated policy, different limits per subject" >}}
   {{< card link="docs/admin-surface" title="Admin surface" subtitle="describe(), the descriptor document, and the HTTP handlers" >}}
   {{< card link="docs/building-a-ui" title="Building a UI" subtitle="Generate every admin screen from the descriptor" >}}
-  {{< card link="docs/example" title="Runnable example" subtitle="A complete host with a working admin UI, in the repo" >}}
+  {{< card link="docs/cookbook" title="Cookbook" subtitle="A runnable host with a working admin UI, recipe by recipe" >}}
   {{< card link="docs/storage-and-conformance" title="Storage & conformance" subtitle="The pg backend, migrations, and the backend-flip contract" >}}
 {{< /cards >}}

@@ -16,34 +16,7 @@ no cache-invalidation webhook, no fail-open-when-the-PDP-is-down question.
 
 ## The layers
 
-```mermaid
-flowchart TD
-    subgraph model["model/ — THE SPEC as types"]
-        M[statement · condition · grant · subject · scope · descriptor]
-    end
-    subgraph core["core/ — pure, zero deps, no I/O"]
-        EV[evaluate: deny-wins over applicable grants]
-        CO[conditions: tri-state, fail-closed]
-        VA[validateStatements: write-time gate]
-        DE["describe(): vocabulary → descriptor"]
-    end
-    subgraph ports["ports/ — the seams"]
-        GS[GrantStore]
-        AS[AuditSink]
-        SY[ScopeRoleSynthesizer]
-        AR[ActionRegistry]
-        SD[SubjectDirectory]
-    end
-    subgraph adapters["shipped adapters"]
-        PG["backends/pg — reference Kysely store"]
-        AD["admin/ — (Request) ⇒ Response routes"]
-        CF["conformance/ — golden fixtures + runner"]
-    end
-    model --> core --> ports
-    ports --> PG
-    core --> AD
-    CF -.->|proves decision-identical| PG
-```
+<img src="/neutron-authz/images/architecture.svg" style="max-width:100%" alt="Architecture: your app calls check() and the admin handlers; both cross the ports seam; Postgres is the plugged-in reference backend and any conformant backend drops into the open socket" />
 
 | Layer          | Depends on         | Job                                            |
 | -------------- | ------------------ | ---------------------------------------------- |

@@ -46,27 +46,14 @@ The engine serves its whole vocabulary as a stable JSON document (`describe()`),
 `(Request) => Response` admin routes over it. Every screen below is generated from that document —
 declare a new condition key server-side and a new form field appears with **no frontend change**:
 
-[![the example admin UI: grants with bounds, a generated bounds form, the coverage panel, a live check, the audit trail](https://developerinlondon.github.io/neutron-authz/images/example-ui.png)](example/)
+[![the example admin UI: grants with bounds, a generated bounds form, the coverage panel, a live check, the audit trail](https://developerinlondon.github.io/neutron-authz/images/example-ui.png)](cookbook/)
 
-That page is [`example/ui.html`](example/) — one static file, no framework, no host knowledge. Run
-it: `cd example && bun install && bun run server.ts`.
+That page is [`cookbook/ui.html`](cookbook/) — one static file, no framework, no host knowledge. Run
+it: `cd cookbook && bun install && bun run server.ts`.
 
 ## Architecture
 
-```mermaid
-flowchart LR
-    subgraph host["your application"]
-        R["routes"] --> C
-        UI["your admin UI"] --> H
-    end
-    subgraph lib["@neutroncore/authz — in-process"]
-        C["Authz.check()"] --> E["pure evaluator<br/>deny-wins · fail-closed"]
-        H["admin handlers"] --> D["describe()"]
-        E --> P[("GrantStore port")]
-        H --> P
-    end
-    P --> PG[("authz_* tables<br/>in YOUR Postgres")]
-```
+<img src="https://developerinlondon.github.io/neutron-authz/images/architecture.svg" alt="Architecture: your app calls check() and the admin handlers; both cross the ports seam; Postgres is the plugged-in reference backend and any conformant backend drops into the open socket" />
 
 The engine is a pure core behind ports. The shipped Postgres backend is the reference implementation
 — **any storage that passes the

@@ -1,14 +1,15 @@
 ---
-title: Runnable example
+title: Cookbook
 weight: 9
+aliases: [/docs/example/]
 ---
 
 The repository ships a complete host in
-[`example/`](https://github.com/developerinlondon/neutron-authz/tree/main/example) — two files,
+[`cookbook/`](https://github.com/developerinlondon/neutron-authz/tree/main/cookbook) — two files,
 in memory, nothing to configure:
 
 ```sh
-cd example
+cd cookbook
 bun install
 bun run server.ts     # → http://localhost:8787
 ```
